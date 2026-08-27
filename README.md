@@ -25,6 +25,48 @@ what the block gets wrong. This server reads both and lets the page settle it.
 
 ## The tools
 
+### `search_recipes`
+
+Searches by a dish or an ingredient. Each row carries the identifier `get_recipe`
+reads a recipe with.
+
+| Argument   | Type              | Meaning                                                    |
+| ---------- | ----------------- | ---------------------------------------------------------- |
+| `query`    | string            | A dish or an ingredient, in French                         |
+| `limit`    | integer, optional | Rows to render, 20 by default, 39 at most                  |
+| `page`     | integer, optional | Which page of results to read, 1 by default                |
+| `category` | string, optional  | One of the `facets` of a previous answer, spelled as it is |
+
+```json
+{
+  "query": "cabillaud",
+  "page": 1,
+  "last_page": 2,
+  "category": null,
+  "results": [
+    {
+      "id": "702",
+      "title": "Cabillaud aux champignons",
+      "title_as_published": "Cabillaud aux champignons",
+      "url": "https://www.supertoinette.com/recette/702/cabillaud-aux-champignons.html",
+      "image_url": "https://recette.supertoinette.com/new/…-800.webp",
+      "description": "…",
+      "categories": ["Sauces", "Poissons"]
+    }
+  ],
+  "result_count": 20,
+  "rows_published": 39,
+  "total_available": null,
+  "facets": [
+    { "label": "Poissons", "count": 60 },
+    { "label": "Légumes", "count": 10 }
+  ],
+  "url": "https://www.supertoinette.com/liste-recettes?q=cabillaud",
+  "source": "Supertoinette",
+  "notes": ["…"]
+}
+```
+
 ### `get_recipe`
 
 Reads one recipe by the number in its address: 4210 in
@@ -167,6 +209,24 @@ stays the cook's business.
 serves "pour un grand plat" gives nothing to scale from, and inventing a
 proportion would put a figure on every line of the answer.
 
+**A search publishes no total, because the site prints none.** `last_page` says
+how far the results run, and the last page holds fewer rows than a full one.
+
+**A facet counts inside one search**, and a recipe filed under two categories is
+counted by both, so the counts never add up to the rows served.
+
+**A category the site does not know is answered exactly like a search that
+matched nothing.** Nothing on the page separates the two, so a filter that finds
+nothing is set aside, the search is asked again without it, and the answer names
+the filter that was dropped along with the categories the site does publish.
+
+**A page past the last one is not an absence.** The site serves it with HTTP 200
+and no row, keeping the block of page numbers that gives it away.
+
+**A row that opens onto something other than a recipe is left out and counted.**
+A search mixes recipes with the site's own selections, and only the first can be
+read by `get_recipe`.
+
 ## Install
 
 ```bash
@@ -283,6 +343,18 @@ la page trancher.
 
 ## Les outils
 
+### `search_recipes`
+
+Cherche par plat ou par ingrédient. Chaque ligne porte l'identifiant avec lequel
+`get_recipe` lit une recette.
+
+| Argument   | Type                | Sens                                                    |
+| ---------- | ------------------- | ------------------------------------------------------- |
+| `query`    | chaîne              | Un plat ou un ingrédient                                |
+| `limit`    | entier, facultatif  | Lignes à rendre, 20 par défaut, 39 au plus              |
+| `page`     | entier, facultatif  | Quelle page de résultats lire, 1 par défaut             |
+| `category` | chaîne, facultative | Une des `facets` d'une réponse précédente, telle quelle |
+
 ### `get_recipe`
 
 Lit une recette par le numéro de son adresse : 4210 dans
@@ -347,6 +419,26 @@ taille de l'une reste l'affaire de la cuisinière.
 **La remise à l'échelle est refusée quand le rendement ne porte aucun nombre.**
 Une recette servie « pour un grand plat » ne donne rien à multiplier, et inventer
 une proportion mettrait un chiffre sur chaque ligne de la réponse.
+
+**Une recherche ne publie aucun total, parce que le site n'en imprime aucun.**
+`last_page` dit jusqu'où vont les résultats, et la dernière page porte moins de
+lignes qu'une page pleine.
+
+**Une facette compte à l'intérieur d'une recherche**, et une recette rangée dans
+deux catégories est comptée par les deux : ces nombres ne s'additionnent pas
+jusqu'aux lignes servies.
+
+**Une catégorie que le site ne connaît pas reçoit exactement la page d'une
+recherche sans résultat.** Rien ne les distingue, donc un filtre qui ne trouve
+rien est écarté, la recherche est refaite sans lui, et la réponse nomme le filtre
+écarté ainsi que les catégories que le site publie.
+
+**Une page au-delà de la dernière n'est pas une absence.** Le site la sert en
+HTTP 200 sans aucune ligne, en gardant le bloc de numéros qui la trahit.
+
+**Une ligne qui ouvre sur autre chose qu'une recette est écartée et comptée.**
+Une recherche mêle les recettes aux sélections du site, et seules les premières
+se lisent avec `get_recipe`.
 
 ## Installation
 

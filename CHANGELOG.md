@@ -10,6 +10,8 @@ First release.
 
 ### Added
 
+- `search_recipes` searches by a dish or an ingredient, returning the categories
+  the site counts beside the results and the identifier to read each recipe with.
 - `get_recipe` reads one recipe by the number in its address, returning the
   ingredients, the steps, the times, the difficulty, the cost, the rating and the
   categories the site publishes, with the quantities rescaled to a number of

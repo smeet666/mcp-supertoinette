@@ -4,6 +4,9 @@ Read Supertoinette from an MCP client. No API key, no account, read-only.
 
 ## What it does
 
+**`search_recipes`** searches by a dish or an ingredient, with the categories the
+site counts beside the results.
+
 **`get_recipe`** reads one recipe by the number in its address, and returns the
 ingredients, the steps, the times, the difficulty and the cost the site
 publishes, rescaled to a number of servings on request.

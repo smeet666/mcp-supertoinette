@@ -123,7 +123,7 @@ describe("createServer", () => {
     const secondNames = (await second.listTools()).tools.map((tool) => tool.name);
 
     expect(firstNames).toEqual(secondNames);
-    expect(firstNames).toEqual(["get_recipe", "scale_ingredients"]);
+    expect(firstNames).toEqual(["get_recipe", "search_recipes", "scale_ingredients"]);
   });
 });
 
@@ -155,7 +155,10 @@ describe("the wiring of every tool", () => {
   }
 
   /** Every tool, with arguments that reach the site rather than a refusal. */
-  const CALLS = [{ name: "get_recipe", arguments: { id: "4210" } }] as const;
+  const CALLS = [
+    { name: "get_recipe", arguments: { id: "4210" } },
+    { name: "search_recipes", arguments: { query: "gaverole" } },
+  ] as const;
 
   it("answers scale_ingredients without touching the network at all", async () => {
     const server = createServer({ fetchImpl: forbiddenFetch });

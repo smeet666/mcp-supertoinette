@@ -18,6 +18,13 @@ import {
   getRecipeOutputShape,
   runGetRecipe,
 } from "./tools/getRecipe.js";
+import type { SearchRecipesArgs } from "./tools/searchRecipes.js";
+import {
+  runSearchRecipes,
+  searchRecipesArgs,
+  searchRecipesDescription,
+  searchRecipesOutputShape,
+} from "./tools/searchRecipes.js";
 import type { ScaleIngredientsArgs } from "./tools/scaleIngredients.js";
 import {
   runScaleIngredients,
@@ -44,6 +51,7 @@ const READ_ONLY = {
 
 export const INSTRUCTIONS = [
   "Tools for reading recipes on Supertoinette, a French recipe site. No API key and no account are needed.",
+  "Start from search_recipes when you have a dish or an ingredient rather than an identifier.",
   "A recipe is addressed by the number in its address, such as 4210 in /recette/4210/veloute-de-gaverole.html, and that number is the whole of the address: the site redirects any spelling of the name to the right page.",
   "Times come back in minutes, and a time the site does not publish is null. The site writes zero for a time it does not display, so a null here means the site said nothing rather than that the step takes no time.",
   "The difficulty carries the site's own wording and no scale, because the site publishes none. The cost carries the scale the site draws, so a level of 1 out of 3 is what the page showed.",
@@ -52,6 +60,7 @@ export const INSTRUCTIONS = [
   "Quantities come back as the site published them; pass 'servings' to get_recipe to rescale them, or use scale_ingredients on a list you already hold.",
   "Every rescaled line says what was done to it: 'scaled' when the arithmetic landed exactly, 'rounded' when the value had to move to stay an amount a kitchen can measure out, and 'unscaled' when the line carries no quantity.",
   "Nothing is converted between unit systems, and an approximate measure such as a pincée keeps the size the cook gives it.",
+  "A search publishes no total, because the site prints none: 'last_page' says how far the results run. The categories counted beside a search are returned as 'facets', and a category is passed back exactly as the site spells it, never built by hand.",
   "This server paces itself, and a rate_limited error means the site asked it to slow down, never that nothing matched.",
   "When you show a recipe to a user, credit Supertoinette and link the page.",
 ].join(" ");
@@ -82,6 +91,24 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
     async (args) => {
       try {
         return await runGetRecipe(client, args as GetRecipeArgs);
+      } catch (error) {
+        return toToolError(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "search_recipes",
+    {
+      title: "Search the recipes",
+      description: searchRecipesDescription,
+      inputSchema: searchRecipesArgs,
+      outputSchema: z.object(searchRecipesOutputShape),
+      annotations: READ_ONLY,
+    },
+    async (args) => {
+      try {
+        return await runSearchRecipes(client, args as SearchRecipesArgs);
       } catch (error) {
         return toToolError(error);
       }

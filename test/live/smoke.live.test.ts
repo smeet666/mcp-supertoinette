@@ -50,4 +50,67 @@ live("against Supertoinette itself", () => {
       code: "invalid_input",
     });
   });
+
+  it("searches, and every row carries an identifier a recipe can be read by", async () => {
+    const { data } = await client.searchRecipes({ query: "cabillaud", page: 1, category: null });
+
+    expect(data.listing.results.length).toBeGreaterThan(0);
+    expect(data.listing.total_available).toBeNull();
+    expect(data.listing.last_page).toBeGreaterThanOrEqual(1);
+    for (const row of data.listing.results) {
+      expect(row.id).toMatch(/^\d+$/);
+      expect(row.url).toContain("/recette/");
+    }
+  });
+
+  it("counts categories inside the search rather than across the catalogue", async () => {
+    const { data } = await client.searchRecipes({ query: "cabillaud", page: 1, category: null });
+
+    expect(data.listing.facets.length).toBeGreaterThan(0);
+    for (const facet of data.listing.facets) {
+      expect(facet.label).not.toBe("");
+      expect(Number.isInteger(facet.count)).toBe(true);
+    }
+  });
+
+  it("says a search matched nothing only where the site says so", async () => {
+    const { data } = await client.searchRecipes({
+      query: "zzzzqqqwww",
+      page: 1,
+      category: null,
+    });
+
+    expect(data.listing.results).toEqual([]);
+    expect(data.listing.matched_nothing).toBe(true);
+  });
+
+  it("does not call a page past the last one an absence", async () => {
+    const { data } = await client.searchRecipes({ query: "cabillaud", page: 99, category: null });
+
+    expect(data.listing.results).toEqual([]);
+    expect(data.listing.matched_nothing).toBe(false);
+    expect(data.listing.last_page).toBeLessThan(99);
+  });
+
+  it("drops a category the site does not know rather than reporting an absence", async () => {
+    const { data } = await client.searchRecipes({
+      query: "cabillaud",
+      page: 1,
+      category: "Pas une catégorie du site",
+    });
+
+    expect(data.dropped_category).toBe("Pas une catégorie du site");
+    expect(data.listing.results.length).toBeGreaterThan(0);
+  });
+
+  it("keeps a category the site does publish", async () => {
+    const { data } = await client.searchRecipes({
+      query: "cabillaud",
+      page: 1,
+      category: "Poissons",
+    });
+
+    expect(data.dropped_category).toBeNull();
+    expect(data.listing.results.length).toBeGreaterThan(0);
+  });
 });
