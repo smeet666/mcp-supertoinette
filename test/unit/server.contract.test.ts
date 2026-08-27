@@ -123,7 +123,14 @@ describe("createServer", () => {
     const secondNames = (await second.listTools()).tools.map((tool) => tool.name);
 
     expect(firstNames).toEqual(secondNames);
-    expect(firstNames).toEqual(["get_recipe", "search_recipes", "scale_ingredients"]);
+    expect(firstNames).toEqual([
+      "get_recipe",
+      "search_recipes",
+      "list_categories",
+      "browse_recipes",
+      "get_wine_pairings",
+      "scale_ingredients",
+    ]);
   });
 });
 
@@ -158,6 +165,10 @@ describe("the wiring of every tool", () => {
   const CALLS = [
     { name: "get_recipe", arguments: { id: "4210" } },
     { name: "search_recipes", arguments: { query: "gaverole" } },
+    { name: "list_categories", arguments: {} },
+    { name: "browse_recipes", arguments: { category: "91/recettes-soupes-potages" } },
+    { name: "get_wine_pairings", arguments: { id: "10" } },
+    { name: "get_wine_pairings", arguments: { page: 1 } },
   ] as const;
 
   it("answers scale_ingredients without touching the network at all", async () => {

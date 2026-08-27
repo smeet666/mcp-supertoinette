@@ -11,6 +11,12 @@ site counts beside the results.
 ingredients, the steps, the times, the difficulty and the cost the site
 publishes, rescaled to a number of servings on request.
 
+**`list_categories`** publishes the categories the site browses its recipes by,
+and **`browse_recipes`** reads one of them page by page.
+
+**`get_wine_pairings`** reads the five wines the site ranks for a dish, in its
+own words.
+
 **`scale_ingredients`** rescales a French ingredient list offline, saying of each
 line whether the result is the exact product, an amount it had to move to, or a
 line carrying nothing that could be multiplied.

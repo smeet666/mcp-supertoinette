@@ -16,6 +16,12 @@ First release.
   ingredients, the steps, the times, the difficulty, the cost, the rating and the
   categories the site publishes, with the quantities rescaled to a number of
   servings on request.
+- `list_categories` publishes the categories the site browses its recipes by,
+  each with the token that opens its listing and where the site printed it.
+- `browse_recipes` reads one category's recipes page by page, with the
+  difficulty and the total time the site prints beside each.
+- `get_wine_pairings` reads the five wines the site ranks for a dish, in its own
+  words, or one page of its alphabetical index of dishes.
 - `scale_ingredients` rescales a French ingredient list offline, saying of each
   line whether the result is the exact product, an amount it had to move to, or a
   line carrying nothing that could be multiplied.

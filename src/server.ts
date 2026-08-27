@@ -18,6 +18,27 @@ import {
   getRecipeOutputShape,
   runGetRecipe,
 } from "./tools/getRecipe.js";
+import type { BrowseRecipesArgs } from "./tools/browseRecipes.js";
+import {
+  browseRecipesArgs,
+  browseRecipesDescription,
+  browseRecipesOutputShape,
+  runBrowseRecipes,
+} from "./tools/browseRecipes.js";
+import type { GetWinePairingsArgs } from "./tools/getWinePairings.js";
+import {
+  getWinePairingsArgs,
+  getWinePairingsDescription,
+  getWinePairingsOutputShape,
+  runGetWinePairings,
+} from "./tools/getWinePairings.js";
+import type { ListCategoriesArgs } from "./tools/listCategories.js";
+import {
+  listCategoriesArgs,
+  listCategoriesDescription,
+  listCategoriesOutputShape,
+  runListCategories,
+} from "./tools/listCategories.js";
 import type { SearchRecipesArgs } from "./tools/searchRecipes.js";
 import {
   runSearchRecipes,
@@ -60,6 +81,9 @@ export const INSTRUCTIONS = [
   "Quantities come back as the site published them; pass 'servings' to get_recipe to rescale them, or use scale_ingredients on a list you already hold.",
   "Every rescaled line says what was done to it: 'scaled' when the arithmetic landed exactly, 'rounded' when the value had to move to stay an amount a kitchen can measure out, and 'unscaled' when the line carries no quantity.",
   "Nothing is converted between unit systems, and an approximate measure such as a pincée keeps the size the cook gives it.",
+  "A category is opened by a number and a name together, taken from list_categories or from a recipe's tags. The site answers a number paired with any other name with a page it does not hold, so a token is never assembled by hand.",
+  "The categories list_categories publishes are the ones the site lists on its own pages, and not every category it files recipes under: a recipe's tags open onto hundreds more.",
+  "get_wine_pairings ranks five wines against a dish in the site's own words. The rank and the order are the site's claim; nothing is scored here.",
   "A search publishes no total, because the site prints none: 'last_page' says how far the results run. The categories counted beside a search are returned as 'facets', and a category is passed back exactly as the site spells it, never built by hand.",
   "This server paces itself, and a rate_limited error means the site asked it to slow down, never that nothing matched.",
   "When you show a recipe to a user, credit Supertoinette and link the page.",
@@ -109,6 +133,60 @@ export function createServer(options: CreateServerOptions = {}): McpServer {
     async (args) => {
       try {
         return await runSearchRecipes(client, args as SearchRecipesArgs);
+      } catch (error) {
+        return toToolError(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "list_categories",
+    {
+      title: "List the categories recipes are browsed by",
+      description: listCategoriesDescription,
+      inputSchema: listCategoriesArgs,
+      outputSchema: z.object(listCategoriesOutputShape),
+      annotations: READ_ONLY,
+    },
+    async (args) => {
+      try {
+        return await runListCategories(client, args as ListCategoriesArgs);
+      } catch (error) {
+        return toToolError(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "browse_recipes",
+    {
+      title: "Read one category's recipes",
+      description: browseRecipesDescription,
+      inputSchema: browseRecipesArgs,
+      outputSchema: z.object(browseRecipesOutputShape),
+      annotations: READ_ONLY,
+    },
+    async (args) => {
+      try {
+        return await runBrowseRecipes(client, args as BrowseRecipesArgs);
+      } catch (error) {
+        return toToolError(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "get_wine_pairings",
+    {
+      title: "Read the wines ranked for a dish",
+      description: getWinePairingsDescription,
+      inputSchema: getWinePairingsArgs,
+      outputSchema: getWinePairingsOutputShape,
+      annotations: READ_ONLY,
+    },
+    async (args) => {
+      try {
+        return await runGetWinePairings(client, args as GetWinePairingsArgs);
       } catch (error) {
         return toToolError(error);
       }
