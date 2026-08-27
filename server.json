@@ -19,12 +19,12 @@
     "url": "https://github.com/smeet666/mcp-supertoinette",
     "source": "github"
   },
-  "version": "0.1.0",
+  "version": "1.0.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "mcp-supertoinette",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "transport": {
         "type": "stdio"
       },

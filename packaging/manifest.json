@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "mcp-supertoinette",
   "display_name": "Supertoinette",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "MCP server for Supertoinette. Read French recipes and rescale their quantities. No API key required.",
   "long_description": "Supertoinette has published French recipes since 2002. This server reads one by the number in its address and returns the ingredients, the method, the times, the difficulty and the cost the site publishes. What it takes care over is what the page does not say: the site writes a time it does not display as zero, so a time comes back null rather than as no time at all; it repeats the last step of every recipe in its structured block, so the steps are read from the list the page prints; and it links each ingredient line to a page of its own choosing, which sometimes names a different ingredient, so that link travels as the site's own rather than as the identity of the ingredient. Quantities can be rescaled to any number of servings, and every line then says whether the arithmetic landed exactly, had to move to stay an amount a kitchen can measure out, or carried nothing that could be multiplied. Read-only, no API key and no account.",
   "author": {

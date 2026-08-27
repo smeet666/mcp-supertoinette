@@ -1,6 +1,6 @@
 {
   "name": "mcp-supertoinette",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "MCP server for Supertoinette. Read French recipes, rescale them, browse categories, ingredient sheets and wine pairings.",
   "keywords": [
     "mcp",
