@@ -4,7 +4,7 @@
   "display_name": "Supertoinette",
   "version": "1.0.0",
   "description": "MCP server for Supertoinette. Read French recipes and rescale their quantities. No API key required.",
-  "long_description": "Supertoinette has published French recipes since 2002. This server reads one by the number in its address and returns the ingredients, the method, the times, the difficulty and the cost the site publishes. What it takes care over is what the page does not say: the site writes a time it does not display as zero, so a time comes back null rather than as no time at all; it repeats the last step of every recipe in its structured block, so the steps are read from the list the page prints; and it links each ingredient line to a page of its own choosing, which sometimes names a different ingredient, so that link travels as the site's own rather than as the identity of the ingredient. Quantities can be rescaled to any number of servings, and every line then says whether the arithmetic landed exactly, had to move to stay an amount a kitchen can measure out, or carried nothing that could be multiplied. Read-only, no API key and no account.",
+  "long_description": "Read recipes from Supertoinette, a French recipe site running since 2002, in an MCP client. Search by dish or ingredient, read a recipe with its ingredients, steps, times, difficulty and cost, browse the categories, and look up the wines the site ranks for a dish. Any recipe can be rescaled to another number of people, and every line says whether the arithmetic was exact or had to move to a quantity a kitchen can measure out. Read-only, no API key and no account.",
   "author": {
     "name": "Damien Bouissou",
     "url": "https://github.com/smeet666"
@@ -37,27 +37,27 @@
   "tools": [
     {
       "name": "search_recipes",
-      "description": "Search by a dish or an ingredient, with the categories the site counts beside the results and the identifier to read each recipe."
+      "description": "Find recipes by dish or ingredient, with the categories the site counts beside the results."
     },
     {
       "name": "get_recipe",
-      "description": "Read one recipe by the number in its address: ingredients, method, times, difficulty and cost, rescaled to a number of servings on request."
+      "description": "Read one recipe: ingredients, steps, times, difficulty and cost, rescaled to a number of people on request."
     },
     {
       "name": "list_categories",
-      "description": "List the categories the site browses its recipes by, each with the token that opens its listing and where the site printed it."
+      "description": "List the categories recipes are browsed by, each with the token that opens its listing."
     },
     {
       "name": "browse_recipes",
-      "description": "Read one category's recipes page by page, with the difficulty and the total time the site prints beside each."
+      "description": "Read one category's recipes page by page, with the difficulty and the total time of each."
     },
     {
       "name": "get_wine_pairings",
-      "description": "Read the five wines the site ranks for a dish, in its own words, or one page of its alphabetical index of dishes."
+      "description": "Read the five wines the site ranks for a dish, or a page of its alphabetical index of dishes."
     },
     {
       "name": "scale_ingredients",
-      "description": "Rescale a French ingredient list offline, saying of each line whether the result is exact, rounded to stay usable, or nothing that could be multiplied."
+      "description": "Rescale a French ingredient list offline, marking each line as exact, rounded, or without a quantity."
     }
   ],
   "compatibility": {

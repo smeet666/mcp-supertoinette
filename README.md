@@ -4,100 +4,116 @@
 [![npm](https://img.shields.io/npm/v/mcp-supertoinette)](https://www.npmjs.com/package/mcp-supertoinette)
 [![licence MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
 
-An MCP server that reads recipes on [Supertoinette](https://www.supertoinette.com).
-Read-only, no API key, no account.
+Read recipes from [Supertoinette](https://www.supertoinette.com) in an MCP
+client: search them, read one, rescale it for another number of people, browse
+the categories, and look up wine pairings.
+
+Read-only. No API key, no account.
 
 _[Version française](#mcp-supertoinette-français)_
 
 ---
 
-## Why it exists
+## Install
 
-Supertoinette has published French recipes since 2002, and a recipe page says
-more than its structured block does. The difficulty, the cost and the resting
-time are printed for a cook to read and appear nowhere in the machine-readable
-part. Meanwhile the structured block says three things that are not so: it
-repeats the last step of every recipe, it writes a time the page never displays
-as zero, and on a listing page it calls a category a recipe.
+```bash
+claude mcp add supertoinette -- npx -y mcp-supertoinette
+```
 
-A reader that took either source alone would drop what the page shows or repeat
-what the block gets wrong. This server reads both and lets the page settle it.
+Or in any MCP client's configuration:
 
-## The tools
+```json
+{
+  "mcpServers": {
+    "supertoinette": {
+      "command": "npx",
+      "args": ["-y", "mcp-supertoinette"]
+    }
+  }
+}
+```
+
+With Docker:
+
+```bash
+docker build -t mcp-supertoinette .
+docker run -i --rm mcp-supertoinette
+```
+
+The container only needs to reach `www.supertoinette.com`.
+
+## Tools
+
+| Tool                | Purpose                                       |
+| ------------------- | --------------------------------------------- |
+| `search_recipes`    | Find recipes by dish or ingredient            |
+| `get_recipe`        | Read one recipe, rescaled on request          |
+| `list_categories`   | The categories recipes are browsed by         |
+| `browse_recipes`    | One category's recipes                        |
+| `get_wine_pairings` | Five wines for a dish, or the index of dishes |
+| `scale_ingredients` | Rescale any French ingredient list, offline   |
+
+A recipe is identified by the number in its address: `4210` in
+`/recette/4210/veloute-de-gaverole.html`. `search_recipes` and `browse_recipes`
+return that number on every row.
 
 ### `search_recipes`
 
-Searches by a dish or an ingredient. Each row carries the identifier `get_recipe`
-reads a recipe with.
-
-| Argument   | Type              | Meaning                                                    |
-| ---------- | ----------------- | ---------------------------------------------------------- |
-| `query`    | string            | A dish or an ingredient, in French                         |
-| `limit`    | integer, optional | Rows to render, 20 by default, 39 at most                  |
-| `page`     | integer, optional | Which page of results to read, 1 by default                |
-| `category` | string, optional  | One of the `facets` of a previous answer, spelled as it is |
+| Argument   | Type    | Default  | Notes                                 |
+| ---------- | ------- | -------- | ------------------------------------- |
+| `query`    | string  | required | A dish or an ingredient, in French    |
+| `limit`    | integer | 20       | 1 to 39                               |
+| `page`     | integer | 1        | 1 to 1000                             |
+| `category` | string  | —        | A facet **label**, such as `Poissons` |
 
 ```json
 {
   "query": "cabillaud",
   "page": 1,
   "last_page": 2,
-  "category": null,
   "results": [
     {
       "id": "702",
       "title": "Cabillaud aux champignons",
-      "title_as_published": "Cabillaud aux champignons",
       "url": "https://www.supertoinette.com/recette/702/cabillaud-aux-champignons.html",
       "image_url": "https://recette.supertoinette.com/new/…-800.webp",
-      "description": "…",
       "categories": ["Sauces", "Poissons"]
     }
   ],
   "result_count": 20,
   "rows_published": 39,
   "total_available": null,
-  "facets": [
-    { "label": "Poissons", "count": 60 },
-    { "label": "Légumes", "count": 10 }
-  ],
-  "url": "https://www.supertoinette.com/liste-recettes?q=cabillaud",
-  "source": "Supertoinette",
-  "notes": ["…"]
+  "facets": [{ "label": "Poissons", "count": 60 }]
 }
 ```
 
+`category` takes one of the `facets` labels, spelled as it came back. An unknown
+label finds nothing, so the filter is dropped, the search runs again without it,
+and a note says which label went. `total_available` is always `null`, since
+Supertoinette publishes no total; use `last_page`. Facet counts overlap, so they
+add up to more than the rows served. A search mixes recipes with the site's own
+editorial selections; the selections are removed, which is why `result_count`
+can fall short of `limit`.
+
 ### `get_recipe`
 
-Reads one recipe by the number in its address: 4210 in
-`/recette/4210/veloute-de-gaverole.html`. The number is the whole of the
-address, since the site redirects any spelling of the name to the right page.
-
-| Argument   | Type              | Meaning                             |
-| ---------- | ----------------- | ----------------------------------- |
-| `id`       | string            | The number in the recipe's address  |
-| `servings` | integer, optional | Rescale the quantities to this many |
+| Argument   | Type    | Default  | Notes                     |
+| ---------- | ------- | -------- | ------------------------- |
+| `id`       | string  | required | The number in the address |
+| `servings` | integer | —        | 1 to 1000                 |
 
 ```json
 {
   "id": "4210",
   "title": "Velouté de gaverole au pravin",
-  "title_as_published": "🥣Velouté de gaverole au pravin",
   "url": "https://www.supertoinette.com/recette/4210/veloute-de-gaverole.html",
-  "yield": {
-    "original_count": 6,
-    "original_text": "6 personnes",
-    "requested": 4,
-    "unit": "personnes",
-    "factor": 0.6667
-  },
+  "yield": { "original_text": "6 personnes", "requested": 4, "factor": 0.6667 },
   "ingredients": [
     {
       "text": "533 g de tiges de gaverole",
       "original": "800 g de tiges de gaverole",
       "scaling": "scaled",
       "amount": 533,
-      "amount_max": null,
       "unit": "g",
       "is_heading": false
     }
@@ -105,36 +121,30 @@ address, since the site redirects any spelling of the name to the right page.
   "steps": ["Émincer les tiges de gaverole."],
   "prep_minutes": 15,
   "cook_minutes": 25,
-  "total_minutes": 70,
   "rest_minutes": 30,
+  "total_minutes": 70,
   "difficulty": { "label": "Recette facile" },
   "cost_level": { "label": "Economique", "level": 1, "scale": 3 },
   "rating": { "value": 4.2, "count": 9, "scale": 5 },
-  "nutrition": null,
-  "tags": [
-    {
-      "label": "Soupes & potages",
-      "category": "91/recettes-soupes-potages",
-      "url": "https://www.supertoinette.com/recettes/91/recettes-soupes-potages"
-    }
-  ],
-  "ingredient_sheets": [
-    {
-      "line": "de tiges de gaverole",
-      "sheet_id": "311",
-      "slug": "gaverole",
-      "url": "https://www.supertoinette.com/fiche-cuisine/311/gaverole.html"
-    }
-  ],
-  "faq": [],
-  "source": "Supertoinette",
-  "notes": ["…"]
+  "tags": [{ "label": "Soupes & potages", "category": "91/recettes-soupes-potages" }],
+  "faq": []
 }
 ```
 
-### `list_categories`
+Times are in minutes, and `null` where Supertoinette publishes no value.
+`difficulty` has a label and no scale, because the site publishes no scale for
+it; `cost_level` has one, because the site draws it. `ingredient_sheets` holds
+the site's own links, and about one in twenty points at a different ingredient
+from the line beside it.
 
-Lists the categories the site browses its recipes by. Takes no argument.
+Asking for `servings` on a recipe whose yield has no number in it — "pour un
+grand plat" — returns `invalid_input`. Asking for the `id` of a category page
+returns `parse_failure`.
+
+### `list_categories` and `browse_recipes`
+
+`list_categories` takes no argument and returns the forty categories
+Supertoinette lists on its pages:
 
 ```json
 {
@@ -146,436 +156,149 @@ Lists the categories the site browses its recipes by. Takes no argument.
       "listed_in": "footer"
     }
   ],
-  "category_count": 40,
-  "url": "https://www.supertoinette.com/recettes-cuisine-photos",
-  "source": "Supertoinette",
-  "notes": ["…"]
+  "category_count": 40
 }
 ```
 
-`listed_in` says where the site printed it: its footer holds the kinds of dish,
-its menu holds the ways of cooking and the seasons.
+`listed_in` is `footer` for the kinds of dish and `menu` for the ways of cooking
+and the seasons. A recipe's own `tags` open onto hundreds of further categories
+that neither list holds.
 
-### `browse_recipes`
+`browse_recipes` reads one of them:
 
-Reads one category's recipes, page by page.
+| Argument   | Type    | Default  | Notes                                        |
+| ---------- | ------- | -------- | -------------------------------------------- |
+| `category` | string  | required | A **token**, such as `107/recettes-desserts` |
+| `limit`    | integer | 20       | 1 to 30                                      |
+| `page`     | integer | 1        | 1 to 1000                                    |
 
-| Argument   | Type              | Meaning                                                |
-| ---------- | ----------------- | ------------------------------------------------------ |
-| `category` | string            | A token from `list_categories` or from a recipe's tags |
-| `limit`    | integer, optional | Rows to render, 20 by default, 30 at most              |
-| `page`     | integer, optional | Which page to read, 1 by default                       |
+The token is a number and a name together. Take it from `list_categories` or
+from a recipe's `tags`, and pass it back unchanged: any other spelling of the
+name reaches a page that does not exist. Each row adds `difficulty` and
+`total_minutes` to what a search row holds.
 
-Each row carries the identifier `get_recipe` reads a recipe with, plus the
-difficulty and the total time the site prints beside it.
+> The `category` of `search_recipes` and the `category` of `browse_recipes` are
+> different things. The first is a facet label (`Poissons`), the second is a
+> token (`95/recettes-poissons`).
+
+A page past the last one comes back with no rows and no error; compare `page`
+with `last_page`.
 
 ### `get_wine_pairings`
 
-Reads the five wines the site ranks for a dish, or one page of its alphabetical
-index of dishes.
+Give `id` for one dish, or `page` for the alphabetical index of dishes. `kind`
+says which of the two came back, and the other field is `null`.
 
-| Argument | Type              | Meaning                                             |
-| -------- | ----------------- | --------------------------------------------------- |
-| `id`     | string, optional  | The number in a dish's address. Give this or `page` |
-| `page`   | integer, optional | Read one page of the index instead                  |
+| Argument | Type    | Notes                          |
+| -------- | ------- | ------------------------------ |
+| `id`     | string  | The number in a dish's address |
+| `page`   | integer | 1 to 100, for the index        |
 
 ```json
 {
   "kind": "dish",
   "dish": {
-    "id": "10",
     "dish": "Aligot",
     "style": "Un vin blanc sec assez puissant, fin et très légèrement boisé",
     "pairings": [
-      { "rank": "Bon accord", "wine": "Premières côtes de bordeaux - blanc sec assez puissant" },
-      { "rank": "Accord parfait", "wine": "Mâcon blanc - blanc sec assez puissant et rond" }
+      { "rank": "Bon accord", "wine": "Premières côtes de bordeaux" },
+      { "rank": "Accord parfait", "wine": "Mâcon blanc" }
     ],
-    "pairing_count": 5,
-    "recipes": [{ "id": "1081", "title": "Aligot", "url": "…" }],
-    "url": "https://www.supertoinette.com/accords-mets-vins/10/aligot.html"
+    "recipes": [{ "id": "1081", "title": "Aligot" }]
   },
-  "index": null,
-  "source": "Supertoinette",
-  "notes": ["…"]
+  "index": null
 }
 ```
 
-`kind` says which of the two answers arrived, and the other field is null.
+The five ranks are Supertoinette's own wording, in its own order.
 
 ### `scale_ingredients`
 
-Rescales a list a caller already holds. Offline: it reaches no site.
+Rescales any French ingredient list without touching the network.
 
-| Argument                                        | Type     | Meaning                             |
-| ----------------------------------------------- | -------- | ----------------------------------- |
-| `ingredients`                                   | string[] | The lines, as the recipe wrote them |
-| `factor` **or** `from_servings` + `to_servings` | number   | What to multiply by                 |
+| Argument                          | Type     | Notes                          |
+| --------------------------------- | -------- | ------------------------------ |
+| `ingredients`                     | string[] | 1 to 200 lines                 |
+| `factor`                          | number   | Above 0, up to 100             |
+| `from_servings` and `to_servings` | integer  | 1 to 1000, instead of `factor` |
 
-```json
-{
-  "factor": 0.5,
-  "ingredients": [
-    {
-      "text": "2 oeufs",
-      "original": "3 oeufs",
-      "scaling": "rounded",
-      "amount": 2,
-      "amount_max": null,
-      "unit": null,
-      "is_heading": false,
-      "note": "Rounded up from 1,5."
-    }
-  ],
-  "scaled_count": 0,
-  "rounded_count": 1,
-  "unscaled_count": 0,
-  "notes": ["…"]
-}
-```
+Every line comes back marked. `scaled` is exact arithmetic. `rounded` moved to
+an amount a kitchen can measure out, with a `note` giving the exact figure it
+moved from. `unscaled` had no quantity to multiply. Units stay in the system the
+recipe used, and an approximate measure keeps its own size: four times one
+pincée is four pincées.
 
-## What the answers refuse to overstate
-
-Each of these comes from something the site actually does, measured over a
-hundred recipes drawn across the whole catalogue.
-
-**A step the site prints twice is rendered once.** The structured block of every
-recipe repeats its last instruction. The steps are read from the list the page
-prints, where the count is right.
-
-**A time the site does not publish is `null`, never zero.** The block writes
-`PT0M` for a time the page displays no badge for, and on the hundred recipes
-measured the two coincide exactly. A cooking time of `null` therefore means the
-site said nothing, rather than that the dish is not cooked.
-
-**The resting time is published, and only on the page.** The site prints it as
-`Pause`, and `total = preparation + cooking + rest` holds on every recipe
-measured.
-
-**The difficulty carries no scale.** The site prints a wording and never says how
-many degrees its scale holds, so the answer carries the wording alone. The cost
-carries its scale, because the page draws it: a level of 1 out of 3 is the number
-of symbols the page lit out of the number it drew.
-
-**An ingredient sheet is the site's own link.** On the corpus measured, 36 of 770
-of those links point at a page naming a different ingredient from the line: a
-line reading "de crème" links to the page for pineapple. The link travels as the
-site's own rather than as the identity of the ingredient.
-
-**A listing is refused rather than read as a dish.** A category page publishes a
-structured block of type Recipe carrying the category's name and an image
-borrowed from one of its recipes. Asking for such a page returns `parse_failure`.
-
-**A rescaled line says what was done to it.** `scaled` means the number is the
-product itself. `rounded` means the value moved, because a countable thing was
-taken to the smallest share a cook can measure out or a floor was reached.
-`unscaled` means the line carries nothing multipliable, and it comes back exactly
-as published.
-
-**Nothing is converted between unit systems**, and an approximate measure keeps
-its own size: a pincée multiplied by four is four pincées, and how big one is
-stays the cook's business.
-
-**Rescaling is refused where the yield carries no number.** A recipe the site
-serves "pour un grand plat" gives nothing to scale from, and inventing a
-proportion would put a figure on every line of the answer.
-
-**A search publishes no total, because the site prints none.** `last_page` says
-how far the results run, and the last page holds fewer rows than a full one.
-
-**A facet counts inside one search**, and a recipe filed under two categories is
-counted by both, so the counts never add up to the rows served.
-
-**A category the site does not know is answered exactly like a search that
-matched nothing.** Nothing on the page separates the two, so a filter that finds
-nothing is set aside, the search is asked again without it, and the answer names
-the filter that was dropped along with the categories the site does publish.
-
-**A page past the last one is not an absence.** The site serves it with HTTP 200
-and no row, keeping the block of page numbers that gives it away.
-
-**A row that opens onto something other than a recipe is left out and counted.**
-A search mixes recipes with the site's own selections, and only the first can be
-read by `get_recipe`.
-
-**The categories the site lists are not every category it files recipes under.**
-Its footer and its menu carry forty between them; a recipe's own tags open onto
-hundreds more the site publishes in neither list. The answer says so, because a
-count of forty reading as the catalogue would be the same fault as a listing
-rendered as complete.
-
-**A category is opened by a number and a name together.** The site answers a
-number paired with any other name with a page it does not hold, so a token is
-passed back exactly as it came rather than assembled by hand.
-
-**A wine's rank is the site's own claim, in the site's own words.** Nothing here
-scores a wine, reorders the five, or supplies a rank the site left off: a line
-written without one is set aside and named.
-
-## Install
-
-```bash
-npx mcp-supertoinette
-```
-
-### Claude Code
-
-```bash
-claude mcp add supertoinette -- npx -y mcp-supertoinette
-```
-
-### Any MCP client
-
-```json
-{
-  "mcpServers": {
-    "supertoinette": {
-      "command": "npx",
-      "args": ["-y", "mcp-supertoinette"]
-    }
-  }
-}
-```
-
-### Container
-
-```bash
-docker build -t mcp-supertoinette .
-docker run -i --rm mcp-supertoinette
-```
-
-The container needs to reach `www.supertoinette.com` and nothing else. It takes
-no credentials, because there are none to take.
+`get_recipe` applies the same rules when given `servings`.
 
 ## Settings
 
-Every setting is an environment variable, and none is required. A value outside
-its range is refused with a line on stderr and the default stands: a setting that
-cannot take effect says so rather than being quietly clamped.
+Environment variables, all optional. A value outside its range is refused on
+stderr and the default applies.
 
-| Variable                | Default | Range                                                                              |
-| ----------------------- | ------- | ---------------------------------------------------------------------------------- |
-| `STO_USER_AGENT`        | —       | Your own identifier. This project's stays appended, so the site can reach a human. |
-| `STO_MIN_INTERVAL_MS`   | 3000    | 3000 to 60000                                                                      |
-| `STO_TIMEOUT_MS`        | 20000   | 1000 to 120000                                                                     |
-| `STO_MAX_RETRIES`       | 3       | 0 to 8                                                                             |
-| `STO_CACHE_TTL_MS`      | 900000  | 0 to 86400000, 0 turns storage off                                                 |
-| `STO_CACHE_MAX_ENTRIES` | 200     | 1 to 5000                                                                          |
-| `STO_LOG_LEVEL`         | `error` | `silent`, `error`, `info`, `debug`                                                 |
+| Variable                | Default | Range                                        |
+| ----------------------- | ------- | -------------------------------------------- |
+| `STO_USER_AGENT`        | —       | Your identifier, prepended to this project's |
+| `STO_MIN_INTERVAL_MS`   | 3000    | 3000 to 60000                                |
+| `STO_TIMEOUT_MS`        | 20000   | 1000 to 120000                               |
+| `STO_MAX_RETRIES`       | 3       | 0 to 8                                       |
+| `STO_CACHE_TTL_MS`      | 900000  | 0 to 86400000, 0 disables the cache          |
+| `STO_CACHE_MAX_ENTRIES` | 200     | 1 to 5000                                    |
+| `STO_LOG_LEVEL`         | `error` | `silent`, `error`, `info`, `debug`           |
 
-The pacing floor cannot be lowered from outside. The site is free to read and
-publishes no crawl delay, which is a reason to be careful rather than a licence
-to be fast. Its `robots.txt` also lays a hundred one-word paths as traps for a
-crawler that follows whatever it finds, so this server builds every address from
-an identifier and follows no link it read on a page.
+One request at a time. `STO_MIN_INTERVAL_MS` raises the gap between two of them
+above its 3000 ms floor, and no setting lowers it.
+
+## Errors
+
+| Code            | Meaning                                             |
+| --------------- | --------------------------------------------------- |
+| `not_found`     | Nothing at that address                             |
+| `invalid_input` | The arguments could not produce a request           |
+| `rate_limited`  | The site asked to slow down; retry in a moment      |
+| `parse_failure` | The page arrived in a shape this server cannot read |
+| `network_error` | The request failed                                  |
+| `timeout`       | No answer within the deadline                       |
+
+Each message starts with its code in brackets.
 
 ## As a library
 
-The reading layer is published on its own, with its pacing, its storage and its
-error vocabulary and no protocol attached. It returns quantities as the site
-published them:
+The reading layer ships on its own, with its pacing, its cache and its error
+handling:
 
 ```ts
 import { SupertoinetteClient } from "mcp-supertoinette/client";
 ```
 
-## Errors
-
-Six codes and no more. A caller branches on the code that opens the message.
-
-| Code            | What it means                                                                           |
-| --------------- | --------------------------------------------------------------------------------------- |
-| `not_found`     | The site holds nothing at that address                                                  |
-| `invalid_input` | The arguments could not produce a request                                               |
-| `rate_limited`  | The site asked this client to slow down. It says nothing about whether anything matched |
-| `parse_failure` | An answer arrived in a shape this server cannot read                                    |
-| `network_error` | The request could not be completed                                                      |
-| `timeout`       | No answer arrived within the deadline                                                   |
+Quantities come back as Supertoinette published them; rescaling lives in the
+tools above it.
 
 ## Attribution
 
-Recipes, titles and photographs belong to Supertoinette. Every answer carries the
-source, and a recipe shown to a reader should credit the site and link the page.
+Recipes, titles and photographs belong to Supertoinette. Credit the site and
+link the page when you show a recipe.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Tests come first, coverage has a floor of
-100%, and the rule everything follows is that the server never says anything the
-data does not carry.
-
-Licensed under [MIT](LICENSE).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Licensed under [MIT](LICENSE).
 
 ---
 
 # mcp-supertoinette (français)
 
-Un serveur MCP qui lit les recettes de
-[Supertoinette](https://www.supertoinette.com). En lecture seule, sans clé d'API
-et sans compte.
+Lire les recettes de [Supertoinette](https://www.supertoinette.com) depuis un
+client MCP : les chercher, en lire une, la remettre à l'échelle pour un autre
+nombre de personnes, parcourir les catégories, consulter les accords mets-vins.
 
-## Pourquoi il existe
-
-Supertoinette publie des recettes françaises depuis 2002, et sa page dit plus que
-son bloc structuré. La difficulté, le coût et le temps de repos sont imprimés
-pour une cuisinière et n'existent nulle part dans la partie lisible par une
-machine. Pendant ce temps, le bloc structuré affirme trois choses fausses : il
-répète la dernière étape de chaque recette, il écrit à zéro un temps que la page
-n'affiche pas, et sur une page de liste il appelle recette une catégorie.
-
-Un lecteur qui prendrait l'une des deux sources seule perdrait ce que la page
-montre ou répéterait ce que le bloc se trompe. Ce serveur lit les deux et laisse
-la page trancher.
-
-## Les outils
-
-### `search_recipes`
-
-Cherche par plat ou par ingrédient. Chaque ligne porte l'identifiant avec lequel
-`get_recipe` lit une recette.
-
-| Argument   | Type                | Sens                                                    |
-| ---------- | ------------------- | ------------------------------------------------------- |
-| `query`    | chaîne              | Un plat ou un ingrédient                                |
-| `limit`    | entier, facultatif  | Lignes à rendre, 20 par défaut, 39 au plus              |
-| `page`     | entier, facultatif  | Quelle page de résultats lire, 1 par défaut             |
-| `category` | chaîne, facultative | Une des `facets` d'une réponse précédente, telle quelle |
-
-### `get_recipe`
-
-Lit une recette par le numéro de son adresse : 4210 dans
-`/recette/4210/veloute-de-gaverole.html`. Le numéro est toute l'adresse, puisque
-le site redirige n'importe quelle écriture du nom vers la bonne page.
-
-| Argument   | Type               | Sens                                 |
-| ---------- | ------------------ | ------------------------------------ |
-| `id`       | chaîne             | Le numéro de l'adresse de la recette |
-| `servings` | entier, facultatif | Remet les quantités pour ce nombre   |
-
-### `list_categories`
-
-Publie les catégories par lesquelles le site parcourt ses recettes. Sans
-argument. `listed_in` dit où le site l'a imprimée : son pied de page porte les
-sortes de plats, son menu porte les façons de cuisiner et les saisons.
-
-### `browse_recipes`
-
-Lit les recettes d'une catégorie, page par page.
-
-| Argument   | Type               | Sens                                                    |
-| ---------- | ------------------ | ------------------------------------------------------- |
-| `category` | chaîne             | Un jeton de `list_categories` ou des tags d'une recette |
-| `limit`    | entier, facultatif | Lignes à rendre, 20 par défaut, 30 au plus              |
-| `page`     | entier, facultatif | Quelle page lire, 1 par défaut                          |
-
-### `get_wine_pairings`
-
-Lit les cinq vins que le site classe pour un plat, ou une page de son index
-alphabétique de plats.
-
-| Argument | Type                | Sens                                                 |
-| -------- | ------------------- | ---------------------------------------------------- |
-| `id`     | chaîne, facultative | Le numéro de l'adresse d'un plat. Celui-ci ou `page` |
-| `page`   | entier, facultatif  | Lit une page de l'index à la place                   |
-
-### `scale_ingredients`
-
-Remet à l'échelle une liste que l'appelant tient déjà. Hors ligne : aucun site
-n'est interrogé.
-
-| Argument                                        | Type     | Sens                          |
-| ----------------------------------------------- | -------- | ----------------------------- |
-| `ingredients`                                   | chaîne[] | Les lignes, telles qu'écrites |
-| `factor` **ou** `from_servings` + `to_servings` | nombre   | Ce par quoi multiplier        |
-
-## Ce que les réponses refusent d'affirmer
-
-Chacun de ces points vient d'une mesure faite sur cent recettes tirées dans tout
-le catalogue.
-
-**Une étape que le site imprime deux fois est rendue une fois.** Le bloc
-structuré de chaque recette répète sa dernière instruction. Les étapes se lisent
-dans la liste que la page imprime, où le compte est juste.
-
-**Un temps que le site ne publie pas vaut `null`, jamais zéro.** Le bloc écrit
-`PT0M` pour un temps dont la page n'affiche aucun badge, et sur les cent recettes
-mesurées les deux coïncident exactement.
-
-**Le temps de repos est publié, et seulement sur la page.** Le site l'imprime
-sous `Pause`, et `total = préparation + cuisson + repos` tient sur toutes les
-recettes mesurées.
-
-**La difficulté ne porte aucune échelle.** Le site imprime un libellé sans jamais
-dire combien de degrés compte son échelle, donc la réponse porte le libellé seul.
-Le coût porte la sienne, parce que la page la dessine.
-
-**Une fiche d'ingrédient est le lien du site.** Sur le corpus mesuré, 36 liens
-sur 770 pointent vers une page nommant un autre ingrédient que la ligne : une
-ligne « de crème » mène à la page de l'ananas. Le lien voyage comme le lien du
-site, jamais comme l'identité de l'ingrédient.
-
-**Une page de liste est refusée plutôt que lue comme un plat.** Elle publie un
-bloc structuré de type Recipe portant le nom de la catégorie. La demander rend
-`parse_failure`.
-
-**Une ligne remise à l'échelle dit ce qu'on lui a fait.** `scaled` : le nombre
-rendu est le produit lui-même. `rounded` : la valeur a bougé, parce qu'un objet
-comptable est tombé sur la plus petite part qu'une cuisine sait prélever, ou
-qu'un plancher a été atteint. `unscaled` : la ligne ne porte rien de
-multipliable, et elle repart telle que publiée.
-
-**Rien n'est converti entre systèmes d'unités**, et une mesure approximative
-garde sa taille : une pincée multipliée par quatre fait quatre pincées, et la
-taille de l'une reste l'affaire de la cuisinière.
-
-**La remise à l'échelle est refusée quand le rendement ne porte aucun nombre.**
-Une recette servie « pour un grand plat » ne donne rien à multiplier, et inventer
-une proportion mettrait un chiffre sur chaque ligne de la réponse.
-
-**Une recherche ne publie aucun total, parce que le site n'en imprime aucun.**
-`last_page` dit jusqu'où vont les résultats, et la dernière page porte moins de
-lignes qu'une page pleine.
-
-**Une facette compte à l'intérieur d'une recherche**, et une recette rangée dans
-deux catégories est comptée par les deux : ces nombres ne s'additionnent pas
-jusqu'aux lignes servies.
-
-**Une catégorie que le site ne connaît pas reçoit exactement la page d'une
-recherche sans résultat.** Rien ne les distingue, donc un filtre qui ne trouve
-rien est écarté, la recherche est refaite sans lui, et la réponse nomme le filtre
-écarté ainsi que les catégories que le site publie.
-
-**Une page au-delà de la dernière n'est pas une absence.** Le site la sert en
-HTTP 200 sans aucune ligne, en gardant le bloc de numéros qui la trahit.
-
-**Une ligne qui ouvre sur autre chose qu'une recette est écartée et comptée.**
-Une recherche mêle les recettes aux sélections du site, et seules les premières
-se lisent avec `get_recipe`.
-
-**Les catégories que le site liste ne sont pas toutes celles sous lesquelles il
-range ses recettes.** Son pied de page et son menu en portent quarante à eux
-deux ; les tags d'une recette en ouvrent des centaines d'autres que ni l'un ni
-l'autre ne publie. La réponse le dit.
-
-**Une catégorie s'ouvre par un numéro et un nom ensemble.** Le site répond au
-numéro accompagné d'un autre nom par une page qu'il ne porte pas, donc un jeton
-se repasse tel qu'il est venu.
-
-**Le rang d'un vin est la revendication du site, dans ses mots.** Rien ici ne
-note un vin, ne réordonne les cinq, ni ne fournit un rang que le site a omis :
-une ligne écrite sans rang est écartée et nommée.
+En lecture seule. Sans clé d'API, sans compte.
 
 ## Installation
-
-```bash
-npx mcp-supertoinette
-```
-
-### Claude Code
 
 ```bash
 claude mcp add supertoinette -- npx -y mcp-supertoinette
 ```
 
-### N'importe quel client MCP
+Ou dans la configuration de n'importe quel client MCP :
 
 ```json
 {
@@ -588,73 +311,171 @@ claude mcp add supertoinette -- npx -y mcp-supertoinette
 }
 ```
 
-### Conteneur
+Avec Docker :
 
 ```bash
 docker build -t mcp-supertoinette .
 docker run -i --rm mcp-supertoinette
 ```
 
-Le conteneur doit joindre `www.supertoinette.com` et rien d'autre. Il ne prend
-aucun identifiant, puisqu'il n'y en a aucun à prendre.
+Le conteneur a seulement besoin de joindre `www.supertoinette.com`.
+
+## Les outils
+
+| Outil               | Rôle                                                     |
+| ------------------- | -------------------------------------------------------- |
+| `search_recipes`    | Chercher des recettes par plat ou par ingrédient         |
+| `get_recipe`        | Lire une recette, remise à l'échelle sur demande         |
+| `list_categories`   | Les catégories par lesquelles parcourir les recettes     |
+| `browse_recipes`    | Les recettes d'une catégorie                             |
+| `get_wine_pairings` | Cinq vins pour un plat, ou l'index des plats             |
+| `scale_ingredients` | Remettre à l'échelle une liste d'ingrédients, hors ligne |
+
+Une recette s'identifie par le numéro de son adresse : `4210` dans
+`/recette/4210/veloute-de-gaverole.html`. `search_recipes` et `browse_recipes`
+rendent ce numéro sur chaque ligne.
+
+### `search_recipes`
+
+| Argument   | Type   | Défaut      | Notes                                 |
+| ---------- | ------ | ----------- | ------------------------------------- |
+| `query`    | chaîne | obligatoire | Un plat ou un ingrédient              |
+| `limit`    | entier | 20          | 1 à 39                                |
+| `page`     | entier | 1           | 1 à 1000                              |
+| `category` | chaîne | —           | Un **libellé** de facette, `Poissons` |
+
+`category` prend un des libellés rendus dans `facets`, écrit tel quel. Un
+libellé inconnu ne trouve rien : le filtre est alors écarté, la recherche
+rejouée sans lui, et une note dit lequel est parti. `total_available` vaut
+toujours `null`, Supertoinette ne publiant aucun total ; utilisez `last_page`.
+Les compteurs de facettes se recoupent et leur somme dépasse le nombre de
+lignes. Une recherche mêle les recettes aux sélections éditoriales du site ;
+celles-ci sont retirées, ce qui explique un `result_count` inférieur au `limit`
+demandé.
+
+### `get_recipe`
+
+| Argument   | Type   | Défaut      | Notes                  |
+| ---------- | ------ | ----------- | ---------------------- |
+| `id`       | chaîne | obligatoire | Le numéro de l'adresse |
+| `servings` | entier | —           | 1 à 1000               |
+
+Les temps sont en minutes, et valent `null` quand Supertoinette n'en publie
+aucun. `difficulty` porte un libellé sans échelle, le site n'en publiant aucune ;
+`cost_level` porte la sienne, le site la dessinant. `ingredient_sheets` contient
+les liens du site lui-même, dont environ un sur vingt pointe vers un autre
+ingrédient que celui de la ligne.
+
+Demander `servings` sur une recette dont le rendement ne porte aucun nombre
+— « pour un grand plat » — rend `invalid_input`. Demander l'`id` d'une page de
+catégorie rend `parse_failure`.
+
+### `list_categories` et `browse_recipes`
+
+`list_categories` ne prend aucun argument et rend les quarante catégories que
+Supertoinette liste sur ses pages. `listed_in` vaut `footer` pour les sortes de
+plats et `menu` pour les façons de cuisiner et les saisons. Les `tags` d'une
+recette ouvrent sur des centaines d'autres catégories qu'aucune des deux listes
+ne porte.
+
+`browse_recipes` en lit une :
+
+| Argument   | Type   | Défaut      | Notes                                       |
+| ---------- | ------ | ----------- | ------------------------------------------- |
+| `category` | chaîne | obligatoire | Un **jeton**, comme `107/recettes-desserts` |
+| `limit`    | entier | 20          | 1 à 30                                      |
+| `page`     | entier | 1           | 1 à 1000                                    |
+
+Le jeton est un numéro et un nom ensemble. Prenez-le dans `list_categories` ou
+dans les `tags` d'une recette et repassez-le inchangé : toute autre écriture du
+nom atteint une page inexistante. Chaque ligne ajoute `difficulty` et
+`total_minutes` à ce que porte une ligne de recherche.
+
+> Le `category` de `search_recipes` et celui de `browse_recipes` sont deux
+> choses différentes. Le premier est un libellé de facette (`Poissons`), le
+> second un jeton (`95/recettes-poissons`).
+
+Une page au-delà de la dernière revient sans ligne et sans erreur ; comparez
+`page` et `last_page`.
+
+### `get_wine_pairings`
+
+Donnez `id` pour un plat, ou `page` pour l'index alphabétique des plats. `kind`
+indique laquelle des deux réponses arrive, l'autre champ valant `null`.
+
+| Argument | Type   | Notes                            |
+| -------- | ------ | -------------------------------- |
+| `id`     | chaîne | Le numéro de l'adresse d'un plat |
+| `page`   | entier | 1 à 100, pour l'index            |
+
+Les cinq rangs sont ceux de Supertoinette, dans son ordre.
+
+### `scale_ingredients`
+
+Remet à l'échelle une liste d'ingrédients française sans toucher au réseau.
+
+| Argument                         | Type     | Notes                            |
+| -------------------------------- | -------- | -------------------------------- |
+| `ingredients`                    | chaîne[] | 1 à 200 lignes                   |
+| `factor`                         | nombre   | Au-dessus de 0, jusqu'à 100      |
+| `from_servings` et `to_servings` | entier   | 1 à 1000, à la place de `factor` |
+
+Chaque ligne revient marquée. `scaled` pour un calcul exact. `rounded` pour une
+valeur ramenée à une quantité mesurable en cuisine, avec une `note` donnant le
+chiffre exact dont elle a bougé. `unscaled` pour une ligne sans quantité à
+multiplier. Les unités restent dans le système de la recette, et une mesure
+approximative garde sa taille : quatre fois une pincée font quatre pincées.
+
+`get_recipe` applique les mêmes règles quand on lui donne `servings`.
 
 ## Réglages
 
-Chaque réglage est une variable d'environnement, et aucune n'est obligatoire. Une
-valeur hors bornes est refusée par une ligne sur stderr et la valeur par défaut
-tient : un réglage qui ne peut pas s'appliquer le dit plutôt que d'être ramené en
-silence dans les bornes.
+Variables d'environnement, toutes facultatives. Une valeur hors bornes est
+refusée sur stderr et la valeur par défaut s'applique.
 
-| Variable                | Défaut  | Bornes                                                                     |
-| ----------------------- | ------- | -------------------------------------------------------------------------- |
-| `STO_USER_AGENT`        | —       | Votre identifiant. Celui du projet reste ajouté, pour joindre une personne |
-| `STO_MIN_INTERVAL_MS`   | 3000    | 3000 à 60000                                                               |
-| `STO_TIMEOUT_MS`        | 20000   | 1000 à 120000                                                              |
-| `STO_MAX_RETRIES`       | 3       | 0 à 8                                                                      |
-| `STO_CACHE_TTL_MS`      | 900000  | 0 à 86400000, 0 coupe le stockage                                          |
-| `STO_CACHE_MAX_ENTRIES` | 200     | 1 à 5000                                                                   |
-| `STO_LOG_LEVEL`         | `error` | `silent`, `error`, `info`, `debug`                                         |
+| Variable                | Défaut  | Bornes                                          |
+| ----------------------- | ------- | ----------------------------------------------- |
+| `STO_USER_AGENT`        | —       | Votre identifiant, placé devant celui du projet |
+| `STO_MIN_INTERVAL_MS`   | 3000    | 3000 à 60000                                    |
+| `STO_TIMEOUT_MS`        | 20000   | 1000 à 120000                                   |
+| `STO_MAX_RETRIES`       | 3       | 0 à 8                                           |
+| `STO_CACHE_TTL_MS`      | 900000  | 0 à 86400000, 0 désactive le cache              |
+| `STO_CACHE_MAX_ENTRIES` | 200     | 1 à 5000                                        |
+| `STO_LOG_LEVEL`         | `error` | `silent`, `error`, `info`, `debug`              |
 
-Le plancher de rythme ne s'abaisse pas depuis l'extérieur. Le site est gratuit et
-ne publie aucun délai d'exploration, ce qui est une raison d'être prudent. Son
-`robots.txt` pose en outre une centaine de chemins d'un seul mot comme pièges à
-robots, donc ce serveur construit chaque adresse à partir d'un identifiant et ne
-suit aucun lien lu dans une page.
+Une requête à la fois. `STO_MIN_INTERVAL_MS` allonge l'écart entre deux d'entre
+elles au-delà de son plancher de 3000 ms, et aucun réglage ne l'abaisse.
+
+## Erreurs
+
+| Code            | Sens                                                         |
+| --------------- | ------------------------------------------------------------ |
+| `not_found`     | Rien à cette adresse                                         |
+| `invalid_input` | Les arguments ne pouvaient pas produire une requête          |
+| `rate_limited`  | Le site a demandé de ralentir ; réessayez dans un moment     |
+| `parse_failure` | La page est arrivée dans une forme illisible pour ce serveur |
+| `network_error` | La requête a échoué                                          |
+| `timeout`       | Aucune réponse dans le délai                                 |
+
+Chaque message commence par son code entre crochets.
 
 ## Comme bibliothèque
 
-La couche de lecture est publiée seule, avec son rythme, son stockage et son
-vocabulaire d'erreurs, sans protocole attaché. Elle rend les quantités telles que
-le site les a publiées :
+La couche de lecture est publiée seule, avec son rythme, son cache et sa gestion
+des erreurs :
 
 ```ts
 import { SupertoinetteClient } from "mcp-supertoinette/client";
 ```
 
-## Erreurs
-
-Six codes et pas un de plus. Un appelant branche sur le code qui ouvre le
-message.
-
-| Code            | Ce qu'il veut dire                                                     |
-| --------------- | ---------------------------------------------------------------------- |
-| `not_found`     | Le site ne porte rien à cette adresse                                  |
-| `invalid_input` | Les arguments ne pouvaient pas produire une requête                    |
-| `rate_limited`  | Le site a demandé de ralentir. Il ne dit rien sur ce qui correspondait |
-| `parse_failure` | Une réponse est arrivée dans une forme que ce serveur ne sait pas lire |
-| `network_error` | La requête n'a pas pu aboutir                                          |
-| `timeout`       | Aucune réponse n'est arrivée dans le délai                             |
+Les quantités reviennent telles que Supertoinette les publie ; la remise à
+l'échelle vit dans les outils au-dessus.
 
 ## Attribution
 
 Les recettes, les titres et les photographies appartiennent à Supertoinette.
-Chaque réponse porte la source, et une recette montrée à un lecteur doit créditer
-le site et lier la page.
+Créditez le site et liez la page quand vous montrez une recette.
 
 ## Contribuer
 
-Voir [CONTRIBUTING.md](CONTRIBUTING.md). Les tests d'abord, la couverture a un
-plancher à 100 %, et la règle que tout suit est qu'un serveur ne dit jamais
-quelque chose que la donnée ne porte pas.
-
-Sous licence [MIT](LICENSE).
+Voir [CONTRIBUTING.md](CONTRIBUTING.md). Sous licence [MIT](LICENSE).
