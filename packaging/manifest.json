@@ -36,6 +36,10 @@
   },
   "tools": [
     {
+      "name": "search_recipes",
+      "description": "Search by a dish or an ingredient, with the categories the site counts beside the results and the identifier to read each recipe."
+    },
+    {
       "name": "get_recipe",
       "description": "Read one recipe by the number in its address: ingredients, method, times, difficulty and cost, rescaled to a number of servings on request."
     },

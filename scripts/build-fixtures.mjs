@@ -396,54 +396,170 @@ ${footer}
 `,
 );
 
-/** A page of search results, with the facets the site counts beside them. */
-writeFileSync(
-  join(out, "search-results.html"),
-  `<!doctype html>
+/**
+ * One row of a search listing.
+ *
+ * The heading carries the categories the site files the row under, in a small
+ * tag inside the link, so the title has to be taken apart from them.
+ */
+const hit = ({ href, title, categories, description, image }) => `
+  <div class="hit row no-gutters">
+    ${image === null ? "" : `<div class="col-md-4"><a href="${href}"><img data-src="${image}" class="b-lazy" alt="${title}" /></a></div>`}
+    <div class="col-md-8">
+      <h2>
+        <a href="${href}">
+          ${title}
+          ${categories === null ? "" : `<small>| ${categories}</small>`}
+        </a>
+      </h2>
+      <p class="link"><a href="${href}">${href}</a></p>
+      ${description === null ? "" : `<p class="description"><a href="${href}">${description}</a></p>`}
+    </div>
+  </div>`;
+
+/** The facets the site counts for one query, each with the rows it holds. */
+const facets = (query, entries) => `
+  <div class="facets">
+  <ul class="list-inline">
+    <li class="list-inline-item filters">Filtrer par catégories :</li>
+${entries
+  .map(
+    ([label, count]) => `    <li class="list-inline-item">
+      <a href="https://www.supertoinette.com/liste-recettes?q=${query}&amp;c=${encodeURIComponent(label)}">
+        ${label}<span class="badge badge-info">${count}</span>
+      </a>
+    </li>
+    <li class="list-inline-item"> | </li>`,
+  )
+  .join("\n")}
+    <li class="list-inline-item"><span class="badge badge-info">7</span></li>
+  </ul>
+  </div>`;
+
+/**
+ * The block of page numbers.
+ *
+ * The site lists the last page even when it abridges the middle, and on a page
+ * past the last it lists only the pages it holds, which is what tells a caller
+ * they walked off the end.
+ */
+const pagination = (query, numbers, current) => `
+  <ul class="pagination" role="navigation">
+${numbers
+  .map((number) =>
+    number === current
+      ? `    <li class="page-item active" aria-current="page"><span class="page-link">${number}</span></li>`
+      : `    <li class="page-item"><a class="page-link" href="https://www.supertoinette.com/liste-recettes?q=${query}&amp;page=${number}">${number}</a></li>`,
+  )
+  .join("\n")}
+  </ul>`;
+
+const searchPage = (body) => `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><title>gaverole - Recherche Supertoinette</title></head>
 <body>${chrome}
 <div id="site-content">
   <h1>Recherche de recettes</h1>
-  <p>Filtrer par catégories :</p>
-  <ul class="list-inline">
-    <li class="list-inline-item"><a href="https://www.supertoinette.com/liste-recettes?q=gaverole&amp;c=Soupes%20%26%20potages">Soupes &amp; potages<span class="badge badge-info">12</span></a></li>
-    <li class="list-inline-item"> | </li>
-    <li class="list-inline-item"><a href="https://www.supertoinette.com/liste-recettes?q=gaverole&amp;c=L%C3%A9gumes">Légumes<span class="badge badge-info">3</span></a></li>
-  </ul>
-  <hr />
-  <div class="hit row no-gutters">
-    <div class="col-md-4"><a href="https://www.supertoinette.com/recette/4210/veloute-de-gaverole.html"><img data-src="https://recette.supertoinette.com/new/veloute-800.webp" alt="Velouté" /></a></div>
-    <div class="col-md-8">
-      <h2><a href="https://www.supertoinette.com/recette/4210/veloute-de-gaverole.html">🥣Velouté de gaverole<small>| Soupes &amp; potages, Légumes</small></a></h2>
-      <p class="link"><a href="https://www.supertoinette.com/recette/4210/veloute-de-gaverole.html">https://www.supertoinette.com/recette/4210/veloute-de-gaverole.html</a></p>
-      <p>Un velouté doux relevé de mirette.</p>
-    </div>
-  </div>
-  <div class="hit row no-gutters">
-    <div class="col-md-8">
-      <h2><a href="https://www.supertoinette.com/diaporama/12/dix-veloutes">Dix veloutés<small>| Diaporamas de recettes</small></a></h2>
-      <p>Une sélection qui n'est pas une recette.</p>
-    </div>
-  </div>
-  <nav><a href="https://www.supertoinette.com/liste-recettes?q=gaverole&amp;page=2">2</a>
-       <a href="https://www.supertoinette.com/liste-recettes?q=gaverole&amp;page=4">4</a></nav>
+${body}
 </div>
 ${footer}
 </body></html>
-`,
+`;
+
+/** A page of search results, with the facets the site counts beside them. */
+writeFileSync(
+  join(out, "search-results.html"),
+  searchPage(`
+${facets("gaverole", [
+  ["Soupes & potages", 12],
+  ["Légumes", 3],
+])}
+<hr />
+${hit({
+  href: "https://www.supertoinette.com/recette/4210/veloute-de-gaverole.html",
+  title: "🥣Velouté de gaverole",
+  categories: "Soupes &amp; potages, Légumes",
+  description: "Un velouté doux relevé de mirette.",
+  image: "https://recette.supertoinette.com/new/veloute-800.webp",
+})}
+${hit({
+  href: "https://www.supertoinette.com/recette/4211/soupe-de-tourbin.html",
+  title: "Soupe de tourbin",
+  categories: "Soupes &amp; potages",
+  description: null,
+  image: null,
+})}
+${hit({
+  href: "https://www.supertoinette.com/diaporama/12/dix-veloutes",
+  title: "Dix veloutés",
+  categories: "Diaporamas de recettes",
+  description: "Une sélection qui n'est pas une recette.",
+  image: null,
+})}
+${hit({
+  href: "https://www.supertoinette.com/recette/4212/bouillon-de-tourbin.html",
+  title: "Bouillon de tourbin",
+  categories: null,
+  description: null,
+  image: null,
+})}
+${hit({
+  href: "",
+  title: "Une ligne sans adresse",
+  categories: null,
+  description: null,
+  image: null,
+})}
+  <div class="hit row no-gutters"><div class="col-md-8"><p>Une ligne sans titre</p></div></div>
+${pagination("gaverole", [1, 2, 3, 47], 1)}
+`),
 );
 
-/** A search that matched nothing, which the site serves without facets. */
+/** A search the site matched nothing for, which it says in so many words. */
 writeFileSync(
   join(out, "search-empty.html"),
-  `<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><title>zzzz - Recherche Supertoinette</title></head>
-<body>${chrome}
-<div id="site-content">
-  <h1>Recherche de recettes</h1>
-  <p>Aucun résultat pour cette recherche</p>
-</div>
-${footer}</body></html>
+  searchPage("  <p>Aucun résultat pour cette recherche</p>"),
+);
+
+/**
+ * A page past the last one.
+ *
+ * The site serves it with HTTP 200, no row, and a block of page numbers listing
+ * only the pages it holds. Nothing on it says the search matched nothing.
+ */
+writeFileSync(
+  join(out, "search-beyond-last.html"),
+  searchPage(`
+${facets("gaverole", [["Soupes & potages", 12]])}
+<hr />
+${pagination("gaverole", [1, 2], null)}
+`),
+);
+
+/**
+ * A listing the site served without counting a single category.
+ *
+ * It happens on a query narrow enough that the site prints rows and no facet at
+ * all, and on a block of page numbers it drew empty.
+ */
+writeFileSync(
+  join(out, "search-uncounted.html"),
+  searchPage(`
+${hit({
+  href: "https://www.supertoinette.com/recette/4210/veloute-de-gaverole.html",
+  title: "Velouté de gaverole",
+  categories: "Soupes &amp; potages",
+  description: null,
+  image: null,
+})}
+  <ul class="pagination" role="navigation"></ul>
+`),
+);
+
+/** A page served without the heading that says it is a search at all. */
+writeFileSync(
+  join(out, "search-not-a-search.html"),
+  `<!doctype html><html lang="fr"><head><meta charset="utf-8"></head>
+<body>${chrome}<div id="site-content"><h1>Autre chose</h1></div>${footer}</body></html>
 `,
 );
 
