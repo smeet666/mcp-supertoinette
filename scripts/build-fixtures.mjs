@@ -18,6 +18,32 @@ const out = join(here, "..", "test", "fixtures");
 mkdirSync(out, { recursive: true });
 
 /**
+ * The two lists of categories the site prints on every page.
+ *
+ * The footer holds the kinds of dish, the menu holds the ways of cooking and
+ * the seasons. Both are links of the very shape a listing row carries, so the
+ * corpus puts them where the site puts them: a reader that took the whole
+ * document would publish them as recipes.
+ */
+const categoryMenu = `
+  <div class="dropdown-menu">
+    <a class="dropdown-item" href="https://www.supertoinette.com/recettes-cuisine-photos">Recettes en photos</a>
+    <div class="dropdown-divider"></div>
+    <a class="dropdown-item" href="/recettes/137/recettes-au-micro-ondes">Au micro-ondes</a>
+    <a class="dropdown-item" href="/recettes/136/recettes-recettes-rapides">Recettes rapides</a>
+    <a class="dropdown-item" href="/quelque-part-ailleurs">Un lien hors des catégories</a>
+  </div>`;
+
+const categoryFooter = `
+  <ul id="nav-footer2">
+    <li><a href="https://www.supertoinette.com/recettes/91/recettes-soupes-potages" title="Soupes &amp; potages">Soupes &amp; potages</a></li>
+    <li class="separator"></li>
+    <li><a href="https://www.supertoinette.com/recettes/107/recettes-desserts" title="Desserts">Desserts</a></li>
+    <li class="separator"></li>
+    <li><a href="https://www.supertoinette.com/mentions" title="Pas une catégorie">Pas une catégorie</a></li>
+  </ul>`;
+
+/**
  * The navigation and the footer every page of the site carries.
  *
  * They sit outside the recipe and hold links of the very shape the parser
@@ -26,6 +52,7 @@ mkdirSync(out, { recursive: true });
  */
 const chrome = `
 <nav class="main-nav">
+${categoryMenu}
   <a href="https://www.supertoinette.com/recettes/107/recettes-tourtes">Tourtes</a>
   <a href="https://www.supertoinette.com/recette/999/une-autre-recette.html">Une autre recette</a>
   <a href="https://www.supertoinette.com/fiche-cuisine/1/une-fiche.html">Une fiche</a>
@@ -35,6 +62,7 @@ const footer = `
 <footer>
   <a href="https://www.supertoinette.com/recettes/500/recettes-du-pied-de-page">Pied de page</a>
   <ul class="ingredientsList"><li>Une liste qui n'est pas celle de la recette</li></ul>
+${categoryFooter}
 </footer>`;
 
 /** The block the site puts in the head of every recipe page. */
@@ -560,6 +588,246 @@ writeFileSync(
   join(out, "search-not-a-search.html"),
   `<!doctype html><html lang="fr"><head><meta charset="utf-8"></head>
 <body>${chrome}<div id="site-content"><h1>Autre chose</h1></div>${footer}</body></html>
+`,
+);
+
+/** One row of a category listing, which prints a difficulty and a total time. */
+const browseRow = ({ href, title, description, image, properties }) => `
+  <div class="row mb-4">
+    ${image === null ? "" : `<div class="col-md-5"><a href="${href}"><img data-src="${image}" class="b-lazy" alt="${title}" /></a></div>`}
+    <div class="col-md-7">
+      <h3><a href="${href}">${title}</a></h3>
+      ${description === null ? "" : `<p class="mb-1">${description}</p>`}
+      ${
+        properties === null
+          ? ""
+          : `<ul class="list-inline recipeProp">${properties
+              .map(
+                (property) =>
+                  `<li class="list-inline-item p-0"><i class="fas fa-utensils"></i> ${property}</li>`,
+              )
+              .join("")}</ul>`
+      }
+    </div>
+  </div>`;
+
+const categoryPage = (heading, body) => `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>${heading} | Supertoinette</title></head>
+<body>${chrome}
+<div id="recipeList">
+  <h1>${heading}</h1>
+${body}
+</div>
+${footer}
+</body></html>
+`;
+
+/** One page of a category's recipes. */
+writeFileSync(
+  join(out, "category-listing.html"),
+  categoryPage(
+    "Soupes &amp; potages",
+    `
+${browseRow({
+  href: "https://www.supertoinette.com/recette/4210/veloute-de-gaverole.html",
+  title: "🥣Velouté de gaverole",
+  description: "Un velouté doux relevé de mirette.",
+  image: "https://recette.supertoinette.com/new/veloute-800.webp",
+  properties: ["Recette facile", "Temps total : 1 h 10 min"],
+})}
+${browseRow({
+  href: "https://www.supertoinette.com/recette/4211/soupe-de-tourbin.html",
+  title: "Soupe de tourbin",
+  description: null,
+  image: null,
+  properties: ["Recette élaborée"],
+})}
+${browseRow({
+  href: "https://www.supertoinette.com/diaporama/12/dix-veloutes",
+  title: "Dix veloutés",
+  description: null,
+  image: null,
+  properties: null,
+})}
+${browseRow({ href: "", title: "Une ligne sans adresse", description: null, image: null, properties: null })}
+${pagination("gaverole", [1, 2, 117], 1)}
+`,
+  ),
+);
+
+/** A page past the last one, which the site serves with no row and its numbers. */
+writeFileSync(
+  join(out, "category-beyond-last.html"),
+  categoryPage("Soupes &amp; potages", pagination("gaverole", [1, 2], null)),
+);
+
+/**
+ * A category page stripped of everything the site usually prints.
+ *
+ * No heading, no block of page numbers, and rows the site published without the
+ * properties it normally puts beside them.
+ */
+writeFileSync(
+  join(out, "category-bare.html"),
+  `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"></head>
+<body>${chrome}
+<div id="recipeList">
+${browseRow({
+  href: "https://www.supertoinette.com/recette/4210/veloute-de-gaverole.html",
+  title: "Velouté de gaverole",
+  description: null,
+  image: null,
+  properties: null,
+})}
+${browseRow({
+  href: "https://www.supertoinette.com/recette/4211/soupe-de-tourbin.html",
+  title: "Soupe de tourbin",
+  description: null,
+  image: null,
+  properties: ["Temps total : à votre convenance", "Une propriété sans lecture"],
+})}
+${browseRow({
+  href: "https://www.supertoinette.com/recette/4212/bouillon-de-tourbin.html",
+  title: "Bouillon de tourbin",
+  description: null,
+  image: null,
+  properties: ["Temps total : 2 h"],
+})}
+${browseRow({
+  href: "https://www.supertoinette.com/recette/4213/consomme-de-mirette.html",
+  title: "Consommé de mirette",
+  description: null,
+  image: null,
+  properties: ["Recette facile", "Temps total : 45 min"],
+})}
+  <div class="row mb-4"><div class="col-md-7"><p>Une ligne sans titre</p></div></div>
+  <ul class="pagination" role="navigation"></ul>
+</div>
+${footer}
+</body></html>
+`,
+);
+
+/** A page served without the container a category listing lives in. */
+writeFileSync(
+  join(out, "category-not-a-listing.html"),
+  `<!doctype html><html lang="fr"><head><meta charset="utf-8"></head>
+<body>${chrome}<div id="autre"><h1>Autre chose</h1></div>${footer}</body></html>
+`,
+);
+
+/** One dish, with the five wines the site ranks for it. */
+writeFileSync(
+  join(out, "pairing-sheet.html"),
+  `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Velouté de gaverole | Supertoinette</title></head>
+<body>${chrome}
+<div id="sheet">
+  <h1>Velouté de gaverole</h1>
+  <p>Un vin blanc sec assez puissant, au nez ouvert et à la bouche fraiche</p>
+  <ul class="my-3" style="font-size: 1.1em;">
+    <li><strong>Bon accord :</strong> Coteaux de Varne - blanc sec assez puissant et rond</li>
+    <li><strong>Très bon accord :</strong> Clos du Tourbin - blanc sec assez puissant et rond</li>
+    <li><strong>Excellent accord :</strong> Mirette blanc - blanc sec fin et léger</li>
+    <li><strong>Accord quasi parfait :</strong> Pravin blanc - blanc sec fin et léger</li>
+    <li><strong>Accord parfait :</strong> Gaverole blanc</li>
+    <li>Une ligne sans rang</li>
+  </ul>
+  <h3>Recettes à découvrir</h3>
+  <div class="row">
+    <div class="col-sm-3 mb-3"><a href="https://www.supertoinette.com/recette/4210/veloute-de-gaverole.html">Velouté de gaverole</a></div>
+    <div class="col-sm-3 mb-3"><a href="https://www.supertoinette.com/diaporama/12/dix-veloutes">Dix veloutés</a></div>
+  </div>
+</div>
+${footer}
+</body></html>
+`,
+);
+
+/**
+ * A dish stripped of everything but its wines.
+ *
+ * No heading, an empty opening paragraph, no recipes beside it and a block of
+ * page numbers the site drew empty.
+ */
+writeFileSync(
+  join(out, "pairing-bare.html"),
+  `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"></head>
+<body>${chrome}
+<div id="sheet">
+  <p> </p>
+  <ul class="my-3">
+    <li><strong>Accord parfait :</strong> Gaverole blanc</li>
+  </ul>
+  <ul class="pagination" role="navigation"></ul>
+</div>
+${footer}
+</body></html>
+`,
+);
+
+/** A dish page the site served without the ranked list. */
+writeFileSync(
+  join(out, "pairing-no-list.html"),
+  `<!doctype html><html lang="fr"><head><meta charset="utf-8"></head>
+<body>${chrome}<div id="sheet"><h1>Velouté de gaverole</h1><p>Rien de plus.</p></div>${footer}</body></html>
+`,
+);
+
+/** A page served without the container a dish lives in. */
+writeFileSync(
+  join(out, "pairing-not-a-sheet.html"),
+  `<!doctype html><html lang="fr"><head><meta charset="utf-8"></head>
+<body>${chrome}<div id="autre"><h1>Autre chose</h1></div>${footer}</body></html>
+`,
+);
+
+/** One page of the alphabetical index of dishes. */
+writeFileSync(
+  join(out, "pairing-index.html"),
+  `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Accords mets-vins | Supertoinette</title></head>
+<body>${chrome}
+<div id="tricklist">
+  <h1>Tous nos accords mets-vins</h1>
+  <div class="row my-3">
+    <div class="col-md-6 mb-2">
+      <a href="https://www.supertoinette.com/accords-mets-vins/1/aligot-de-varne.html" title="Aligot de Varne">
+        <i class="fas fa-angle-right"></i>
+        Aligot de Varne
+      </a>
+    </div>
+    <div class="col-md-6 mb-2">
+      <a href="https://www.supertoinette.com/accords-mets-vins/2/veloute-de-gaverole.html" title="Velouté de gaverole">
+        <i class="fas fa-angle-right"></i>
+        Velouté de gaverole
+      </a>
+    </div>
+    <div class="col-md-6 mb-2">
+      <a href="https://www.supertoinette.com/quelque-part-ailleurs">Un lien hors de l'index</a>
+    </div>
+  </div>
+  ${pagination("gaverole", [1, 2, 42], 1)}
+</div>
+${footer}
+</body></html>
+`,
+);
+
+/** A page of the index the site served without a block of page numbers. */
+writeFileSync(
+  join(out, "pairing-index-bare.html"),
+  `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"></head>
+<body>${chrome}
+<div id="tricklist">
+  <h1>Tous nos accords mets-vins</h1>
+  <a href="https://www.supertoinette.com/accords-mets-vins/3/tourbin.html">Tourbin</a>
+</div>
+${footer}
+</body></html>
 `,
 );
 

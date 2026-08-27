@@ -132,6 +132,76 @@ address, since the site redirects any spelling of the name to the right page.
 }
 ```
 
+### `list_categories`
+
+Lists the categories the site browses its recipes by. Takes no argument.
+
+```json
+{
+  "categories": [
+    {
+      "label": "Soupes & potages",
+      "category": "91/recettes-soupes-potages",
+      "url": "https://www.supertoinette.com/recettes/91/recettes-soupes-potages",
+      "listed_in": "footer"
+    }
+  ],
+  "category_count": 40,
+  "url": "https://www.supertoinette.com/recettes-cuisine-photos",
+  "source": "Supertoinette",
+  "notes": ["…"]
+}
+```
+
+`listed_in` says where the site printed it: its footer holds the kinds of dish,
+its menu holds the ways of cooking and the seasons.
+
+### `browse_recipes`
+
+Reads one category's recipes, page by page.
+
+| Argument   | Type              | Meaning                                                |
+| ---------- | ----------------- | ------------------------------------------------------ |
+| `category` | string            | A token from `list_categories` or from a recipe's tags |
+| `limit`    | integer, optional | Rows to render, 20 by default, 30 at most              |
+| `page`     | integer, optional | Which page to read, 1 by default                       |
+
+Each row carries the identifier `get_recipe` reads a recipe with, plus the
+difficulty and the total time the site prints beside it.
+
+### `get_wine_pairings`
+
+Reads the five wines the site ranks for a dish, or one page of its alphabetical
+index of dishes.
+
+| Argument | Type              | Meaning                                             |
+| -------- | ----------------- | --------------------------------------------------- |
+| `id`     | string, optional  | The number in a dish's address. Give this or `page` |
+| `page`   | integer, optional | Read one page of the index instead                  |
+
+```json
+{
+  "kind": "dish",
+  "dish": {
+    "id": "10",
+    "dish": "Aligot",
+    "style": "Un vin blanc sec assez puissant, fin et très légèrement boisé",
+    "pairings": [
+      { "rank": "Bon accord", "wine": "Premières côtes de bordeaux - blanc sec assez puissant" },
+      { "rank": "Accord parfait", "wine": "Mâcon blanc - blanc sec assez puissant et rond" }
+    ],
+    "pairing_count": 5,
+    "recipes": [{ "id": "1081", "title": "Aligot", "url": "…" }],
+    "url": "https://www.supertoinette.com/accords-mets-vins/10/aligot.html"
+  },
+  "index": null,
+  "source": "Supertoinette",
+  "notes": ["…"]
+}
+```
+
+`kind` says which of the two answers arrived, and the other field is null.
+
 ### `scale_ingredients`
 
 Rescales a list a caller already holds. Offline: it reaches no site.
@@ -226,6 +296,20 @@ and no row, keeping the block of page numbers that gives it away.
 **A row that opens onto something other than a recipe is left out and counted.**
 A search mixes recipes with the site's own selections, and only the first can be
 read by `get_recipe`.
+
+**The categories the site lists are not every category it files recipes under.**
+Its footer and its menu carry forty between them; a recipe's own tags open onto
+hundreds more the site publishes in neither list. The answer says so, because a
+count of forty reading as the catalogue would be the same fault as a listing
+rendered as complete.
+
+**A category is opened by a number and a name together.** The site answers a
+number paired with any other name with a page it does not hold, so a token is
+passed back exactly as it came rather than assembled by hand.
+
+**A wine's rank is the site's own claim, in the site's own words.** Nothing here
+scores a wine, reorders the five, or supplies a rank the site left off: a line
+written without one is set aside and named.
 
 ## Install
 
@@ -366,6 +450,32 @@ le site redirige n'importe quelle écriture du nom vers la bonne page.
 | `id`       | chaîne             | Le numéro de l'adresse de la recette |
 | `servings` | entier, facultatif | Remet les quantités pour ce nombre   |
 
+### `list_categories`
+
+Publie les catégories par lesquelles le site parcourt ses recettes. Sans
+argument. `listed_in` dit où le site l'a imprimée : son pied de page porte les
+sortes de plats, son menu porte les façons de cuisiner et les saisons.
+
+### `browse_recipes`
+
+Lit les recettes d'une catégorie, page par page.
+
+| Argument   | Type               | Sens                                                    |
+| ---------- | ------------------ | ------------------------------------------------------- |
+| `category` | chaîne             | Un jeton de `list_categories` ou des tags d'une recette |
+| `limit`    | entier, facultatif | Lignes à rendre, 20 par défaut, 30 au plus              |
+| `page`     | entier, facultatif | Quelle page lire, 1 par défaut                          |
+
+### `get_wine_pairings`
+
+Lit les cinq vins que le site classe pour un plat, ou une page de son index
+alphabétique de plats.
+
+| Argument | Type                | Sens                                                 |
+| -------- | ------------------- | ---------------------------------------------------- |
+| `id`     | chaîne, facultative | Le numéro de l'adresse d'un plat. Celui-ci ou `page` |
+| `page`   | entier, facultatif  | Lit une page de l'index à la place                   |
+
 ### `scale_ingredients`
 
 Remet à l'échelle une liste que l'appelant tient déjà. Hors ligne : aucun site
@@ -439,6 +549,19 @@ HTTP 200 sans aucune ligne, en gardant le bloc de numéros qui la trahit.
 **Une ligne qui ouvre sur autre chose qu'une recette est écartée et comptée.**
 Une recherche mêle les recettes aux sélections du site, et seules les premières
 se lisent avec `get_recipe`.
+
+**Les catégories que le site liste ne sont pas toutes celles sous lesquelles il
+range ses recettes.** Son pied de page et son menu en portent quarante à eux
+deux ; les tags d'une recette en ouvrent des centaines d'autres que ni l'un ni
+l'autre ne publie. La réponse le dit.
+
+**Une catégorie s'ouvre par un numéro et un nom ensemble.** Le site répond au
+numéro accompagné d'un autre nom par une page qu'il ne porte pas, donc un jeton
+se repasse tel qu'il est venu.
+
+**Le rang d'un vin est la revendication du site, dans ses mots.** Rien ici ne
+note un vin, ne réordonne les cinq, ni ne fournit un rang que le site a omis :
+une ligne écrite sans rang est écartée et nommée.
 
 ## Installation
 

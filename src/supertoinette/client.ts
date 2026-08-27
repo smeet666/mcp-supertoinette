@@ -14,11 +14,24 @@ import { invalidInput } from "../errors.js";
 import type { Read, RecipeCore } from "../types.js";
 import { Cache } from "./cache.js";
 import { fetchPage } from "./http.js";
+import type { CategoryEntry, CategoryListing } from "./parseBrowse.js";
+import { parseCategoryMenus, parseListingPage } from "./parseBrowse.js";
+import type { PairingIndex, PairingSheet } from "./parsePairings.js";
+import { parsePairingIndex, parsePairingSheet } from "./parsePairings.js";
 import { parseRecipePage } from "./parseRecipe.js";
 import type { Listing } from "./parseSearch.js";
 import { parseSearchPage } from "./parseSearch.js";
 import { RateLimiter } from "./rateLimiter.js";
-import { isId, recipeUrl, searchUrl } from "./urls.js";
+import {
+  categoryMenusUrl,
+  categoryUrl,
+  isCategoryToken,
+  isId,
+  pairingIndexUrl,
+  pairingUrl,
+  recipeUrl,
+  searchUrl,
+} from "./urls.js";
 
 /** What one search asked for. */
 export interface SearchRequest {
@@ -61,6 +74,7 @@ export class SupertoinetteClient {
   private readonly limiter: RateLimiter;
   private readonly recipes: Cache<Stored<RecipeCore>>;
   private readonly listings: Cache<Stored<Listing>>;
+  private readonly pages: Cache<Stored<unknown>>;
 
   constructor(options: ClientOptions) {
     this.config = options.config;
@@ -75,6 +89,100 @@ export class SupertoinetteClient {
       options.config.cacheTtlMs,
       options.config.cacheMaxEntries,
     );
+    this.pages = new Cache<Stored<unknown>>(
+      options.config.cacheTtlMs,
+      options.config.cacheMaxEntries,
+    );
+  }
+
+  /**
+   * Read the categories the site lists on the page it serves.
+   *
+   * Both lists sit on every page, so this reads one page and takes both. What
+   * they hold is what the site publishes as its categories, and it is not the
+   * whole of what it files recipes under: that is said by the tool above rather
+   * than left for a caller to discover.
+   */
+  listCategories(): Promise<Read<CategoryEntry[]>> {
+    return this.readPage(categoryMenusUrl(), (body) => ({
+      value: parseCategoryMenus(body),
+      skipped: [],
+    }));
+  }
+
+  /**
+   * Read one page of a category's recipes.
+   *
+   * A token that cannot become an address is refused here rather than sent. The
+   * site answers a number paired with the wrong name by a 404 rather than by a
+   * redirect, so the two travel together and neither is assembled by hand.
+   */
+  // Kept async so a refused argument comes back as a rejected promise rather
+  // than as a throw, which is what a caller holding only a `.catch` expects.
+  async browseRecipes(category: string, page: number): Promise<Read<CategoryListing>> {
+    const token = category.trim();
+    if (!isCategoryToken(token)) {
+      throw invalidInput(
+        `"${token}" is not a Supertoinette category.`,
+        "A category is a number and a name together, such as '107/recettes-desserts'. Take one from list_categories or from a recipe's tags.",
+      );
+    }
+
+    const url = categoryUrl(token, page);
+    return await this.readPage(url, (body, served) => {
+      const parsed = parseListingPage(body, served);
+      return { value: parsed.listing, skipped: parsed.skipped };
+    });
+  }
+
+  /** Read the wines the site ranks for one dish. */
+  // Async for the same reason browseRecipes is: a refusal rejects.
+  async getPairings(id: string): Promise<Read<PairingSheet>> {
+    const named = id.trim();
+    if (!isId(named)) {
+      throw invalidInput(
+        `"${named}" is not a Supertoinette dish identifier.`,
+        "An identifier is the number in a dish's address, such as 10 in /accords-mets-vins/10/. List the index to find one.",
+      );
+    }
+
+    return await this.readPage(pairingUrl(named), (body, served) => {
+      const parsed = parsePairingSheet(body, named, served);
+      return { value: parsed.sheet, skipped: parsed.skipped };
+    });
+  }
+
+  /** Read one page of the alphabetical index of dishes. */
+  listPairings(page: number): Promise<Read<PairingIndex>> {
+    return this.readPage(pairingIndexUrl(page), (body, served) => ({
+      value: parsePairingIndex(body, served),
+      skipped: [],
+    }));
+  }
+
+  /**
+   * Read one page, from the store when it is held there.
+   *
+   * Parsed before it is stored, so a page nobody could read is never served
+   * back for the rest of the entry's lifetime.
+   */
+  private async readPage<T>(
+    url: string,
+    parse: (body: string, served: string) => Stored<T>,
+  ): Promise<Read<T>> {
+    const stored = this.pages.get(url) as Stored<T> | undefined;
+    if (stored) {
+      this.logger.debug(`served from the store: ${url}`);
+      return withSkipped({ data: stored.value, cached: true }, stored.skipped);
+    }
+
+    const page = await this.limiter.schedule(() => this.get(url));
+    const parsed = parse(page.body, page.url);
+    if (parsed.skipped.length > 0) {
+      this.logger.warn(`${parsed.skipped.length} thing(s) set aside on ${url}`);
+    }
+    this.pages.set(url, parsed);
+    return withSkipped({ data: parsed.value, cached: false }, parsed.skipped);
   }
 
   /**

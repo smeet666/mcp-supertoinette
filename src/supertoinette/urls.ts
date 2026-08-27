@@ -90,6 +90,39 @@ export function categoryTokenFromHref(href: string): string | null {
   return isCategoryToken(token) ? token : null;
 }
 
+const PAIRING_PREFIX = "/accords-mets-vins/";
+const PAIRING_INDEX_PATH = "/accords-mets-vins";
+/** The page whose footer and menu carry the site's own lists of categories. */
+const RECIPES_HOME_PATH = "/recettes-cuisine-photos";
+
+/**
+ * The address of the page the categories are read from.
+ *
+ * Every page the site serves carries both lists, so this is a choice of one
+ * page rather than the only one that holds them. The site's own recipes home is
+ * the one whose purpose is closest to the question being asked.
+ */
+export const categoryMenusUrl = (): string => new URL(RECIPES_HOME_PATH, SITE_ORIGIN).toString();
+
+/**
+ * The address of one dish's wines, built from its identifier alone.
+ *
+ * The site serves any slug and redirects to the canonical one, so a slug is
+ * never an input. The slug written here is a placeholder the redirect replaces.
+ */
+export function pairingUrl(id: string): string {
+  return new URL(`${PAIRING_PREFIX}${encodeURIComponent(id)}/plat.html`, SITE_ORIGIN).toString();
+}
+
+/** The address of one page of the alphabetical index of dishes. */
+export function pairingIndexUrl(page: number): string {
+  const url = new URL(PAIRING_INDEX_PATH, SITE_ORIGIN);
+  if (page > 1) {
+    url.searchParams.set("page", String(page));
+  }
+  return url.toString();
+}
+
 /** Turn a link the site printed into an address a caller can open. */
 export const absolute = (href: string): string => new URL(href, SITE_ORIGIN).toString();
 
