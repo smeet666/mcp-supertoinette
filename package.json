@@ -1,0 +1,81 @@
+{
+  "name": "mcp-supertoinette",
+  "version": "0.1.0",
+  "description": "MCP server for Supertoinette. Read French recipes, rescale them, browse categories, ingredient sheets and wine pairings.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "supertoinette",
+    "recipes",
+    "cooking",
+    "french-recipes"
+  ],
+  "homepage": "https://github.com/smeet666/mcp-supertoinette#readme",
+  "bugs": {
+    "url": "https://github.com/smeet666/mcp-supertoinette/issues"
+  },
+  "funding": {
+    "type": "buymeacoffee",
+    "url": "https://buymeacoffee.com/smeet666"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/smeet666/mcp-supertoinette.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Damien Bouissou",
+    "url": "https://github.com/smeet666"
+  },
+  "type": "module",
+  "bin": {
+    "mcp-supertoinette": "dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/supertoinette/client.d.ts",
+      "import": "./dist/supertoinette/client.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "server.json"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "mcpName": "io.github.smeet666/mcp-supertoinette",
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run test/unit",
+    "coverage": "vitest run test/unit --coverage",
+    "test:live": "vitest run test/live --testTimeout=90000",
+    "build:fixtures": "node scripts/build-fixtures.mjs",
+    "format": "biome check --write && prettier --write \"**/*.{md,yml}\"",
+    "check": "biome ci && prettier --check \"**/*.{md,yml}\"",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build",
+    "start": "node dist/index.js",
+    "inspector": "npx @modelcontextprotocol/inspector node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.10",
+    "@types/node": "^24.13.3",
+    "@vitest/coverage-v8": "^4.1.11",
+    "prettier": "3.9.6",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}
