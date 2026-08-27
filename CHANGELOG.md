@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the version numbers
 follow [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-08-27
+
+### Changed
+
+- The README opens on the install command and gives each tool its own section,
+  with the arguments, their types, their defaults and their bounds beside the
+  JSON it returns. It states the bounds of `limit` and `page`, what a page past
+  the last one returns, why a result count can fall short of the limit asked
+  for, and when rescaling is refused.
+- `search_recipes` takes a facet label as `category`, and `browse_recipes` takes
+  a number-and-name token. The README states both and separates them.
+- The launch guide and the extension manifest are rewritten to match.
+
 ## [1.0.0] - 2026-08-27
 
 The tool surface is settled, which is what this number says. Nothing an
@@ -36,5 +49,6 @@ First release.
 - The reading layer is published on its own under the `./client` subpath, with
   its pacing, its storage and its error vocabulary and no protocol attached.
 
+[1.0.1]: https://github.com/smeet666/mcp-supertoinette/releases/tag/v1.0.1
 [1.0.0]: https://github.com/smeet666/mcp-supertoinette/releases/tag/v1.0.0
 [0.1.0]: https://github.com/smeet666/mcp-supertoinette/releases/tag/v0.1.0

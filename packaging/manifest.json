@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "mcp-supertoinette",
   "display_name": "Supertoinette",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server for Supertoinette. Read French recipes and rescale their quantities. No API key required.",
   "long_description": "Read recipes from Supertoinette, a French recipe site running since 2002, in an MCP client. Search by dish or ingredient, read a recipe with its ingredients, steps, times, difficulty and cost, browse the categories, and look up the wines the site ranks for a dish. Any recipe can be rescaled to another number of people, and every line says whether the arithmetic was exact or had to move to a quantity a kitchen can measure out. Read-only, no API key and no account.",
   "author": {
