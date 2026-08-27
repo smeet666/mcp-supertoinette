@@ -1,46 +1,31 @@
 # mcp-supertoinette
 
-Read Supertoinette from an MCP client. No API key, no account, read-only.
+Read recipes from Supertoinette in an MCP client. No API key, no account,
+read-only.
 
 ## What it does
 
-**`search_recipes`** searches by a dish or an ingredient, with the categories the
-site counts beside the results.
+Six tools:
 
-**`get_recipe`** reads one recipe by the number in its address, and returns the
-ingredients, the steps, the times, the difficulty and the cost the site
-publishes, rescaled to a number of servings on request.
-
-**`list_categories`** publishes the categories the site browses its recipes by,
-and **`browse_recipes`** reads one of them page by page.
-
-**`get_wine_pairings`** reads the five wines the site ranks for a dish, in its
-own words.
-
-**`scale_ingredients`** rescales a French ingredient list offline, saying of each
-line whether the result is the exact product, an amount it had to move to, or a
-line carrying nothing that could be multiplied.
+- **`search_recipes`** — find recipes by dish or ingredient.
+- **`get_recipe`** — read one, rescaled to any number of people on request.
+- **`list_categories`** — the categories recipes are browsed by.
+- **`browse_recipes`** — one category's recipes, page by page.
+- **`get_wine_pairings`** — five wines for a dish, ranked by the site.
+- **`scale_ingredients`** — rescale any French ingredient list, offline.
 
 ## What sets it apart
 
-A recipe page says more than its structured block, and the block says three
-things that are not so. It repeats the last step of every recipe, it writes a
-time the page never displays as zero, and on a listing page it calls a category a
-recipe. This server reads both and lets the page settle it: a step is rendered
-once, a time the site does not publish comes back null rather than as no time at
-all, and a listing served in place of a recipe is refused rather than rendered as
-a dish.
+Supertoinette prints the difficulty, the cost and the resting time on the page
+and puts none of them in its machine-readable block. This server reads both and
+returns all of it.
 
-The resting time and the cost exist only on the page, so they are read there. The
-difficulty carries the site's own wording and no scale, because the site
-publishes none. An ingredient sheet travels as the link the site chose, since on
-a hundred recipes measured, 36 of 770 of those links name a different ingredient
-from the line they sit on.
+Rescaling marks every line: exact, rounded to a measurable amount, or left alone
+for want of a quantity. Half an egg is not an amount, so a count lands on a
+whole one and says so. Units stay in the system the recipe used.
 
-A rescaled line never overstates its own exactness. Nothing is converted between
-unit systems, an approximate measure keeps the size the cook gives it, and a
-yield the site stated with no number is refused rather than scaled from an
-invented proportion.
+A time the site publishes no value for comes back as `null`. Searches and
+listings come with no total, because the site prints none.
 
 ## Install
 
