@@ -65,6 +65,14 @@
           "isRequired": false
         }
       ]
+    },
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/smeet666/mcp-supertoinette/releases/download/v1.0.1/mcp-supertoinette-1.0.1.mcpb",
+      "version": "1.0.1",
+      "transport": {
+        "type": "stdio"
+      }
     }
   ]
 }
