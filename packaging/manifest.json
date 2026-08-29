@@ -37,167 +37,27 @@
   "tools": [
     {
       "name": "get_recipe",
-      "description": "Read one recipe: ingredients, steps, times, difficulty and cost, rescaled to a number of people on request.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 10,
-            "description": "The number in the recipe's address, such as '4210'. Search for a dish when you do not have one."
-          },
-          "servings": {
-            "description": "Rescale the quantities to this many. Left out, they come back as the site published them. It is refused when the site's own wording carries no number to scale from.",
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 1000
-          }
-        },
-        "required": ["id"],
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "Read one recipe: ingredients, steps, times, difficulty and cost, rescaled to a number of people on request."
     },
     {
       "name": "search_recipes",
-      "description": "Find recipes by dish or ingredient, with the categories the site counts beside the results.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 120,
-            "description": "A dish or an ingredient to look for, in French."
-          },
-          "limit": {
-            "description": "Rows to render, 20 by default. The site serves at most 39 to a page, and 'rows_published' always states what the page held.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 39
-          },
-          "page": {
-            "description": "Which page of results to read, 1 by default. 'last_page' says how far they run.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 1000
-          },
-          "category": {
-            "description": "Narrow the search to one category, taken from the 'facets' of a previous answer and spelled exactly as the site spells it. Never build one by hand: the site answers a wording it does not know with a page that reads as an absence.",
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 60
-          }
-        },
-        "required": ["query"],
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "Find recipes by dish or ingredient, with the categories the site counts beside the results."
     },
     {
       "name": "list_categories",
-      "description": "List the categories recipes are browsed by, each with the token that opens its listing.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {},
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "List the categories recipes are browsed by, each with the token that opens its listing."
     },
     {
       "name": "browse_recipes",
-      "description": "Read one category's recipes page by page, with the difficulty and the total time of each.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "category": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 80,
-            "description": "The category to read, as a number and a name together, such as '107/recettes-desserts'. Take one from list_categories or from a recipe's tags."
-          },
-          "limit": {
-            "description": "Rows to render, 20 by default. The site serves at most 30 to a page, and 'rows_published' always states what the page held.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 30
-          },
-          "page": {
-            "description": "Which page to read, 1 by default. 'last_page' says how far the listing runs.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 1000
-          }
-        },
-        "required": ["category"],
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "Read one category's recipes page by page, with the difficulty and the total time of each."
     },
     {
       "name": "get_wine_pairings",
-      "description": "Read the five wines the site ranks for a dish, or a page of its alphabetical index of dishes.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "description": "The number in a dish's address, such as '10'. Give this or 'page'.",
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 10
-          },
-          "page": {
-            "description": "Read one page of the alphabetical index of dishes instead of one dish. Give this or 'id'.",
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 100
-          }
-        },
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "Read the five wines the site ranks for a dish, or a page of its alphabetical index of dishes."
     },
     {
       "name": "scale_ingredients",
-      "description": "Rescale a French ingredient list offline, marking each line as exact, rounded, or without a quantity.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "ingredients": {
-            "minItems": 1,
-            "maxItems": 200,
-            "type": "array",
-            "items": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 300
-            },
-            "description": "The lines to rescale, as the recipe wrote them."
-          },
-          "factor": {
-            "description": "What to multiply the quantities by. Give this, or the two servings counts.",
-            "type": "number",
-            "exclusiveMinimum": 0,
-            "maximum": 100
-          },
-          "from_servings": {
-            "description": "How many the list was written for.",
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 1000
-          },
-          "to_servings": {
-            "description": "How many it should serve.",
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "maximum": 1000
-          }
-        },
-        "required": ["ingredients"],
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "additionalProperties": false
-      }
+      "description": "Rescale a French ingredient list offline, marking each line as exact, rounded, or without a quantity."
     }
   ],
   "compatibility": {
