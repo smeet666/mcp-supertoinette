@@ -1,0 +1,1326 @@
+{
+  "author": "Damien Bouissou",
+  "authorUrl": "https://github.com/smeet666",
+  "description": "MCP server for Supertoinette. Read French recipes, rescale them, browse categories, ingredient sheets and wine pairings.",
+  "homepage": "https://github.com/smeet666/mcp-supertoinette#readme",
+  "identifier": "smeet666-mcp-supertoinette",
+  "name": "mcp-supertoinette",
+  "prompts": [],
+  "resources": [],
+  "tags": [
+    "mcp",
+    "model-context-protocol",
+    "supertoinette",
+    "recipes",
+    "cooking",
+    "french-recipes"
+  ],
+  "tools": [
+    {
+      "name": "get_recipe",
+      "title": "Read one recipe",
+      "description": "Read one recipe on Supertoinette by its identifier, which is the number in its address: 4210 in /recette/4210/veloute-de-gaverole.html. Returns the ingredients, the steps, the times, the difficulty and the cost the site publishes. A time the site does not publish comes back as null rather than as zero. Pass 'servings' to rescale the quantities: each line then says whether the arithmetic landed exactly, or had to move to stay an amount a kitchen can measure out.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10,
+            "description": "The number in the recipe's address, such as '4210'. Search for a dish when you do not have one."
+          },
+          "servings": {
+            "description": "Rescale the quantities to this many. Left out, they come back as the site published them. It is refused when the site's own wording carries no number to scale from.",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 1000
+          }
+        },
+        "required": ["id"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "description": "The title with the pictogram the site opens it with taken off."
+          },
+          "title_as_published": {
+            "type": "string",
+            "description": "The title exactly as the site wrote it."
+          },
+          "url": {
+            "type": "string",
+            "description": "The public page. Show this when citing the recipe."
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "yield": {
+            "type": "object",
+            "properties": {
+              "original_count": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The number the site printed, when its wording carries one."
+              },
+              "original_text": {
+                "type": "string",
+                "description": "The site's own wording, which is the claim it made."
+              },
+              "requested": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "What the caller asked for."
+              },
+              "unit": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The site's own word for what it counts."
+              },
+              "factor": {
+                "type": "number",
+                "description": "What the quantities were multiplied by."
+              }
+            },
+            "required": ["original_count", "original_text", "requested", "unit", "factor"],
+            "additionalProperties": false,
+            "description": "How many the recipe was written for, and how many were asked for."
+          },
+          "ingredients": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "The line as it now reads."
+                },
+                "original": {
+                  "type": "string",
+                  "description": "The line as it was given."
+                },
+                "scaling": {
+                  "type": "string",
+                  "enum": ["scaled", "rounded", "unscaled"],
+                  "description": "'scaled' when the number is the product itself, 'rounded' when the value moved or a floor was reached, 'unscaled' when the line carries nothing multipliable."
+                },
+                "amount": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The scaled quantity, read together with 'unit'."
+                },
+                "amount_max": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Upper bound when the line gives a range."
+                },
+                "unit": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The unit 'amount' is in, which may differ from the original."
+                },
+                "is_heading": {
+                  "type": "boolean",
+                  "description": "True for a line naming a part of the recipe rather than an ingredient."
+                },
+                "note": {
+                  "description": "Why the line was rounded, clamped or left alone.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text",
+                "original",
+                "scaling",
+                "amount",
+                "amount_max",
+                "unit",
+                "is_heading"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "ingredient_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Lines rendered, headings included."
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "intro": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The prose the page prints above the steps."
+          },
+          "prep_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the site publishes no preparation time."
+          },
+          "cook_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null when the site publishes no cooking time."
+          },
+          "total_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rest_minutes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Resting time, which the page prints as 'Pause'."
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rating": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "number"
+                  },
+                  "count": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Reviews counted."
+                  },
+                  "scale": {
+                    "type": "number",
+                    "description": "The top of the scale, as published."
+                  }
+                },
+                "required": ["value", "count", "scale"],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "nutrition": {
+            "type": "null",
+            "description": "Supertoinette publishes none."
+          },
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  }
+                },
+                "required": ["label"],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The site's own wording. It publishes no scale for this, so none is stated."
+          },
+          "cost_level": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "level": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "scale": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": ["label", "level", "scale"],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The site's own wording, with the scale it draws the symbols on."
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "category": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Pass this back to browse the category. Null when the link opens no listing."
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": ["label", "category", "url"],
+              "additionalProperties": false
+            }
+          },
+          "ingredient_sheets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "string",
+                  "description": "The words the site linked, as published."
+                },
+                "sheet_id": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": ["line", "sheet_id", "slug", "url"],
+              "additionalProperties": false
+            }
+          },
+          "faq": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string"
+                },
+                "answer": {
+                  "type": "string"
+                }
+              },
+              "required": ["question", "answer"],
+              "additionalProperties": false
+            }
+          },
+          "source": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "title_as_published",
+          "url",
+          "description",
+          "published_at",
+          "yield",
+          "ingredients",
+          "ingredient_count",
+          "steps",
+          "intro",
+          "prep_minutes",
+          "cook_minutes",
+          "total_minutes",
+          "rest_minutes",
+          "category",
+          "author",
+          "rating",
+          "nutrition",
+          "difficulty",
+          "cost_level",
+          "images",
+          "tags",
+          "ingredient_sheets",
+          "faq",
+          "source",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "search_recipes",
+      "title": "Search the recipes",
+      "description": "Search Supertoinette by a dish or an ingredient. Each row carries the identifier to read the recipe with get_recipe. The site publishes no total, so 'total_available' is null and 'last_page' says how far the results run. The categories it counts beside a search are returned as 'facets': pass one back as 'category' to narrow the search, spelled exactly as the site spells it. A category the site does not know is answered like a search that matched nothing, so a filter that finds nothing is dropped and the answer says so.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120,
+            "description": "A dish or an ingredient to look for, in French."
+          },
+          "limit": {
+            "description": "Rows to render, 20 by default. The site serves at most 39 to a page, and 'rows_published' always states what the page held.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 39
+          },
+          "page": {
+            "description": "Which page of results to read, 1 by default. 'last_page' says how far they run.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "category": {
+            "description": "Narrow the search to one category, taken from the 'facets' of a previous answer and spelled exactly as the site spells it. Never build one by hand: the site answers a wording it does not know with a page that reads as an absence.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60
+          }
+        },
+        "required": ["query"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "page": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The page these rows were read from."
+          },
+          "last_page": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The highest page the site links to from this one."
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The category the answer was narrowed to, or null for a search across all of them."
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Pass this to get_recipe."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "The title with the pictogram the site opens it with taken off."
+                },
+                "title_as_published": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "The public page. Show this when citing the recipe."
+                },
+                "image_url": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "description": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "categories": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "The categories the site files the row under."
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "title_as_published",
+                "url",
+                "image_url",
+                "description",
+                "categories"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "result_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Rows rendered here."
+          },
+          "rows_published": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Rows the page held, before any were rendered."
+          },
+          "total_available": {
+            "type": "null",
+            "description": "Supertoinette prints no total on a search page, so there is none to report."
+          },
+          "facets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": ["label", "count"],
+              "additionalProperties": false
+            },
+            "description": "The categories the site counts inside this search. A recipe filed under two is counted by both, so these do not add up to the rows served."
+          },
+          "url": {
+            "type": "string",
+            "description": "The page these rows were read from."
+          },
+          "source": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "query",
+          "page",
+          "last_page",
+          "category",
+          "results",
+          "result_count",
+          "rows_published",
+          "total_available",
+          "facets",
+          "url",
+          "source",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "list_categories",
+      "title": "List the categories recipes are browsed by",
+      "description": "List the categories Supertoinette browses its recipes by. Each entry carries the token that opens its listing with browse_recipes, and 'listed_in' says where the site printed it: its footer holds the kinds of dish, its menu holds the ways of cooking and the seasons. Never build a token by hand, because the site answers a number paired with the wrong name with a page it does not hold. These two lists are not every category the site files recipes under: a recipe's own tags open onto hundreds more that neither list publishes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "categories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string",
+                  "description": "The site's own wording for it."
+                },
+                "category": {
+                  "type": "string",
+                  "description": "Pass this to browse_recipes. A number and a name, never assembled by hand."
+                },
+                "url": {
+                  "type": "string",
+                  "description": "The public page. Show this when citing the category."
+                },
+                "listed_in": {
+                  "type": "string",
+                  "enum": ["footer", "menu"],
+                  "description": "Where the site printed it: 'footer' for the kinds of dish, 'menu' for the ways of cooking and the seasons."
+                }
+              },
+              "required": ["label", "category", "url", "listed_in"],
+              "additionalProperties": false
+            }
+          },
+          "category_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Entries the two lists hold."
+          },
+          "url": {
+            "type": "string",
+            "description": "The page these categories were read from."
+          },
+          "source": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["categories", "category_count", "url", "source", "notes"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "browse_recipes",
+      "title": "Read one category's recipes",
+      "description": "Read the recipes of one Supertoinette category, page by page. The category is a number and a name together, taken from list_categories or from the 'tags' of a recipe, and never assembled by hand. Each row carries the identifier get_recipe reads a recipe with, plus the difficulty and the total time the site prints beside it. The site publishes no total, so 'last_page' says how far the listing runs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "description": "The category to read, as a number and a name together, such as '107/recettes-desserts'. Take one from list_categories or from a recipe's tags."
+          },
+          "limit": {
+            "description": "Rows to render, 20 by default. The site serves at most 30 to a page, and 'rows_published' always states what the page held.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30
+          },
+          "page": {
+            "description": "Which page to read, 1 by default. 'last_page' says how far the listing runs.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          }
+        },
+        "required": ["category"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "The category that was read."
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The site's own heading for the category."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The page these rows were read from."
+          },
+          "last_page": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The highest page the site links to from this one."
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Pass this to get_recipe."
+                },
+                "title": {
+                  "type": "string",
+                  "description": "The title with the pictogram the site opens it with taken off."
+                },
+                "title_as_published": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "The public page. Show this when citing the recipe."
+                },
+                "image_url": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "description": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "difficulty": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The site's own wording, or null where it printed none."
+                },
+                "total_minutes": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Minutes, or null where the site printed no total."
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "title_as_published",
+                "url",
+                "image_url",
+                "description",
+                "difficulty",
+                "total_minutes"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "result_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Rows rendered here."
+          },
+          "rows_published": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Rows the page held, before any were rendered."
+          },
+          "total_available": {
+            "type": "null",
+            "description": "Supertoinette prints no total on a category page, so there is none to report."
+          },
+          "url": {
+            "type": "string",
+            "description": "The page these rows were read from."
+          },
+          "source": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "category",
+          "title",
+          "page",
+          "last_page",
+          "results",
+          "result_count",
+          "rows_published",
+          "total_available",
+          "url",
+          "source",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "get_wine_pairings",
+      "title": "Read the wines ranked for a dish",
+      "description": "Read the wines Supertoinette ranks for one dish, given the number in its address as 'id'. Each wine comes with the site's own wording for how well it goes, from 'Bon accord' to 'Accord parfait'. Called with 'page' instead, it reads one page of the alphabetical index of dishes, which is where the identifiers come from: the index runs alphabetically, so a dish beginning with a late letter sits on a late page.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "description": "The number in a dish's address, such as '10'. Give this or 'page'.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10
+          },
+          "page": {
+            "description": "Read one page of the alphabetical index of dishes instead of one dish. Give this or 'id'.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["dish", "index"],
+            "description": "Which of the two answers arrived. The other field is null."
+          },
+          "dish": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "dish": {
+                    "type": "string",
+                    "description": "The site's own name for it."
+                  },
+                  "style": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "The style of wine the site opens with. Null where it wrote none."
+                  },
+                  "pairings": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "rank": {
+                          "type": "string",
+                          "description": "The site's own wording for how well it goes, such as 'Accord parfait'."
+                        },
+                        "wine": {
+                          "type": "string",
+                          "description": "The wine and whatever the site writes about it, as published."
+                        }
+                      },
+                      "required": ["rank", "wine"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "pairing_count": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "recipes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["id", "title", "url"],
+                      "additionalProperties": false
+                    },
+                    "description": "The recipes the site links beside the dish. Read one with get_recipe."
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": ["id", "dish", "style", "pairings", "pairing_count", "recipes", "url"],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The wines ranked for one dish, when 'id' was given."
+          },
+          "index": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "page": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "last_page": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "The highest page the site links to from this one."
+                  },
+                  "dishes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "dish": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["id", "dish", "url"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "dish_count": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991,
+                    "description": "Dishes this page holds."
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": ["page", "last_page", "dishes", "dish_count", "url"],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "One page of the index of dishes, when 'page' was given."
+          },
+          "source": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["kind", "dish", "index", "source", "notes"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "scale_ingredients",
+      "title": "Rescale a list of ingredients",
+      "description": "Rescale a list of French ingredient lines, offline. Give either 'factor', or 'from_servings' and 'to_servings' together. Each line comes back with what was done to it: 'scaled' when the arithmetic landed exactly, 'rounded' when the value had to move to stay something a kitchen can measure out, and 'unscaled' when the line carries no quantity at all. Nothing is converted between unit systems, and an approximate measure such as a pincée keeps its own size.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ingredients": {
+            "minItems": 1,
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "description": "The lines to rescale, as the recipe wrote them."
+          },
+          "factor": {
+            "description": "What to multiply the quantities by. Give this, or the two servings counts.",
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 100
+          },
+          "from_servings": {
+            "description": "How many the list was written for.",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 1000
+          },
+          "to_servings": {
+            "description": "How many it should serve.",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 1000
+          }
+        },
+        "required": ["ingredients"],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "factor": {
+            "type": "number",
+            "description": "What the quantities were multiplied by."
+          },
+          "ingredients": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "description": "The line as it now reads."
+                },
+                "original": {
+                  "type": "string",
+                  "description": "The line as it was given."
+                },
+                "scaling": {
+                  "type": "string",
+                  "enum": ["scaled", "rounded", "unscaled"],
+                  "description": "'scaled' when the number is the product itself, 'rounded' when the value moved or a floor was reached, 'unscaled' when the line carries nothing multipliable."
+                },
+                "amount": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The scaled quantity, read together with 'unit'."
+                },
+                "amount_max": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Upper bound when the line gives a range."
+                },
+                "unit": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The unit 'amount' is in, which may differ from the original."
+                },
+                "is_heading": {
+                  "type": "boolean",
+                  "description": "True for a line naming a part of the recipe rather than an ingredient."
+                },
+                "note": {
+                  "description": "Why the line was rounded, clamped or left alone.",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "text",
+                "original",
+                "scaling",
+                "amount",
+                "amount_max",
+                "unit",
+                "is_heading"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "scaled_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Lines whose arithmetic landed exactly."
+          },
+          "rounded_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Lines whose value had to move."
+          },
+          "unscaled_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Lines carrying no quantity."
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "factor",
+          "ingredients",
+          "scaled_count",
+          "rounded_count",
+          "unscaled_count",
+          "notes"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    }
+  ],
+  "version": "1.0.2"
+}
