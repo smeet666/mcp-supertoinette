@@ -247,7 +247,7 @@ function renderRecipe(recipe: RecipeCore, lines: ScaledIngredient[], scaled: Rec
     recipe.cost_level === null ? null : recipe.cost_level.label,
   ]
     .filter((part): part is string => part !== null)
-    .join(" — ");
+    .join(" · ");
 
   const times = [
     `preparation ${minutes(recipe.prep_minutes)}`,
