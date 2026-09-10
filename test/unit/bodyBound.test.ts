@@ -74,3 +74,23 @@ describe("the size a caller can set", () => {
     expect(loadConfig({}).maxBodyBytes).toBe(8_000_000);
   });
 });
+
+describe("a response carrying no readable stream", () => {
+  it("is read whole rather than reported as an empty page", async () => {
+    const page = `<!doctype html><html><body>${"x".repeat(3000)}</body></html>`;
+    const reading = client(
+      vi.fn(async () => {
+        const response = new Response(page, {
+          status: 200,
+          headers: { "content-type": "text/html" },
+        });
+        // A transport can hand back an answer with no stream to read in pieces,
+        // and the body is still there to be waited for.
+        Object.defineProperty(response, "body", { value: null });
+        return response;
+      }) as unknown as typeof fetch,
+    );
+
+    expect(await said(reading.getRecipe("4210"))).not.toContain(String(CAP));
+  });
+});
