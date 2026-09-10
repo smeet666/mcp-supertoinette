@@ -9,6 +9,7 @@
 
 import type { Logger } from "../config.js";
 import {
+  parseFailure,
   invalidInput,
   networkError,
   notFound,
@@ -17,11 +18,21 @@ import {
 } from "../errors.js";
 import type { RateLimiter } from "./rateLimiter.js";
 
+/** The bound a caller that names none is held to. */
+export const DEFAULT_MAX_BODY_BYTES = 8_000_000;
+
 export interface FetchOptions {
   url: string;
   userAgent: string;
   timeoutMs: number;
   maxRetries: number;
+  /**
+   * The largest page this reader holds, in bytes.
+   *
+   * Left out, the default stands. This interface is published, so a caller
+   * built against an earlier version keeps compiling and keeps the bound.
+   */
+  maxBodyBytes?: number;
   limiter: RateLimiter;
   logger: Logger;
   fetchImpl?: typeof fetch;
@@ -55,6 +66,51 @@ const RETRIES_AFTER_SILENCE = 1;
  * Read a Retry-After header, which is either a number of seconds or a date.
  * Returns null when it says neither, so the caller falls back to its own wait.
  */
+/**
+ * The body, read in pieces and stopped at the size this reader holds.
+ *
+ * A deadline abandons a body that arrives slowly. One that arrives quickly and
+ * large is never abandoned by it, and it lands in memory in one piece before
+ * anything looks at it: a page of two hundred megabytes fits inside twenty
+ * seconds, and what it costs is the whole session rather than the one call.
+ */
+async function readBounded(response: Response, maxBytes: number, url: string): Promise<string> {
+  const stream = response.body;
+  // A response carrying no readable stream is read whole. Nothing arrives in
+  // pieces to count, and the body still has to be waited for, so a caller
+  // holding a deadline over this read keeps it.
+  if (!stream) {
+    return await response.text();
+  }
+
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  const parts: string[] = [];
+  let held = 0;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      held += value.byteLength;
+      if (held > maxBytes) {
+        throw parseFailure(
+          `Supertoinette answered with more than ${maxBytes} bytes, past what this reads for one page.`,
+          { url },
+        );
+      }
+      parts.push(decoder.decode(value, { stream: true }));
+    }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+
+  parts.push(decoder.decode());
+  return parts.join("");
+}
+
 export function parseRetryAfter(value: string | null, now = Date.now()): number | null {
   if (!value) {
     return null;
@@ -88,8 +144,15 @@ export function parseRetryAfter(value: string | null, now = Date.now()): number 
  * that failure says nothing about the answer being reported: swallowing it here
  * keeps a refusal from being reported as a transport fault.
  */
-const discardBody = (response: Response): Promise<void> =>
-  response.body?.cancel().catch(() => undefined) ?? Promise.resolve();
+const discardBody = (response: Response): Promise<void> => {
+  const stream = response.body;
+  // A body being read in pieces holds the lock, and cancelling a locked stream
+  // raises rather than resolving. The reader releases it on its own way out.
+  if (stream === null || stream.locked) {
+    return Promise.resolve();
+  }
+  return stream.cancel().catch(() => undefined);
+};
 
 /** What a refusal amounts to, and what it costs the pacing. */
 type Refusal =
@@ -264,6 +327,7 @@ export interface Page {
 
 export async function fetchPage(options: FetchOptions): Promise<Page> {
   const { url, userAgent, timeoutMs, maxRetries, limiter, logger } = options;
+  const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
   const doFetch = options.fetchImpl ?? fetch;
 
   let lastError: Error | null = null;
@@ -299,7 +363,10 @@ export async function fetchPage(options: FetchOptions): Promise<Page> {
         limiter.succeeded();
         // A response built by hand carries no address of its own, and the one
         // that was asked for is then the one it came from.
-        return { body: await response.text(), url: response.url === "" ? url : response.url };
+        return {
+          body: await readBounded(response, maxBodyBytes, url),
+          url: response.url === "" ? url : response.url,
+        };
       }
 
       const verdict = await readRefusal(response, url, attempt, maxRetries);

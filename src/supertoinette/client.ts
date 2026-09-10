@@ -242,6 +242,7 @@ export class SupertoinetteClient {
       userAgent: this.config.userAgent,
       timeoutMs: this.config.timeoutMs,
       maxRetries: this.config.maxRetries,
+      maxBodyBytes: this.config.maxBodyBytes,
       limiter: this.limiter,
       logger: this.logger,
       ...(this.fetchImpl ? { fetchImpl: this.fetchImpl } : {}),
