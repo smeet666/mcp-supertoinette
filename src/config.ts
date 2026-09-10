@@ -29,6 +29,8 @@ export interface Config {
   maxRetries: number;
   cacheTtlMs: number;
   cacheMaxEntries: number;
+  /** The largest page this reader holds, in bytes. */
+  maxBodyBytes: number;
   logLevel: LogLevel;
 }
 
@@ -125,6 +127,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     ),
     timeoutMs: readInteger(env, "STO_TIMEOUT_MS", 20_000, 1000, 120_000),
     maxRetries: readInteger(env, "STO_MAX_RETRIES", 3, 0, 8),
+    maxBodyBytes: readInteger(env, "STO_MAX_BODY_BYTES", 8_000_000, 100_000, 64_000_000),
     // A recipe is edited on the scale of years, and the rating printed beside it
     // moves by one vote at a time, so a quarter of an hour of staleness costs a
     // caller nothing and saves the site a request.
