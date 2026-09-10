@@ -107,7 +107,7 @@ const INDEX_NOTE =
 
 /** One line per wine, in the order the site ranked them. */
 function renderDish(sheet: PairingSheet): string {
-  const opening = sheet.style === null ? sheet.dish : `${sheet.dish} — ${sheet.style}`;
+  const opening = sheet.style === null ? sheet.dish : `${sheet.dish} · ${sheet.style}`;
   return [
     opening,
     ...sheet.pairings.map((pairing) => `${pairing.rank}: ${pairing.wine}`),
